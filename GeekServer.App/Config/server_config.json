@@ -1,6 +1,11 @@
 {
 	"IsDebug": true,
-	"ServerId": 10001, //[1-16383]
+	"ServerId": 10001, //[最大131072(取10000到99999)]
+	"LocalId": "192.168.0.163",
+	"TcpPort": 10000,
+	"XrpcPort": 30000,
+
+	"UseLibuv": true,
 
 	"TimerSaveMax": 360, //定制回存(秒)
 	"TimerSaveMin": 300,
@@ -12,9 +17,6 @@
 	"HttpCode": "geek_server_http_code",
 	"HttpUrl": "/geek/server/logic",
 	"HttpPort": 20000,
-
-	"TcpPort": 10000,
-	"UseLibuv": true,
 
 	"MongoDB": "geek_game",
 	//"MongoUrl": "mongodb://192.168.1.214:6666?maxPoolSize=50&waitQueueMultiple=100&compressors=zlib",

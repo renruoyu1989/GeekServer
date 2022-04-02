@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GeekServer.Gateway
+namespace GeekServer.DB
 {
     class Program
     {

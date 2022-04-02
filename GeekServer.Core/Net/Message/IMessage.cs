@@ -1,5 +1,16 @@
 ﻿namespace Geek.Server
 {
+
+
+    public enum MsgType
+    {
+        Login,
+        Game,
+        Chart,
+        Recharge,
+        Center,
+    }
+
     public interface IMessage
     {
         /// <summary>
