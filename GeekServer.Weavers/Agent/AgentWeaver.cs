@@ -1,6 +1,8 @@
 ﻿using Fody;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
+using Mono.Collections.Generic;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,6 +10,8 @@ namespace Weavers
 {
     public class AgentWeaver : BaseModuleWeaver
     {
+
+        //private MethodReference completeTaskRef;
         public override void Execute()
         {
             WriteMessage($"AgentWeaver Start：{ModuleDefinition.Assembly.Name}", MessageImportance.High);
@@ -52,9 +56,11 @@ namespace Weavers
             var objRef = ModuleDefinition.ImportReference(objDef);
             var objConsRef = ModuleDefinition.ImportReference(objConsDef);
 
+            //遍历dll中的所有类型
             var adds = new List<TypeDefinition>(ModuleDefinition.GetTypes());
             foreach (var typeDef in adds)
             {
+                //排除抽象类
                 if (typeDef.IsAbstract)
                     continue;
 
@@ -68,9 +74,11 @@ namespace Weavers
                         break;
                     }
                 }
+                //排除非IComponentAgent
                 if (!isAgentComp)
                     continue;
 
+                //检查Agent是否二次继承
                 if (!typeDef.BaseType.Resolve().FullName.StartsWith("Geek.Server.StateComponentAgent")
                     && !typeDef.BaseType.Resolve().FullName.StartsWith("Geek.Server.FuncComponentAgent")
                     && !typeDef.BaseType.Resolve().FullName.StartsWith("Geek.Server.QueryComponentAgent"))
@@ -79,9 +87,17 @@ namespace Weavers
                     continue;
                 }
 
+                //创建wrapper
                 var wrapperType = new TypeDefinition("Wrapper.Agent", typeDef.Name + "Wrapper", typeDef.Attributes, typeDef);
-                ModuleDefinition.Types.Add(wrapperType);
+                //创建interface
+                var agentInterfType = new TypeDefinition("Wrapper.Agent", "I" + typeDef.Name, typeDef.Attributes);
+                agentInterfType.IsInterface = true;
+                wrapperType.Interfaces.Add(new InterfaceImplementation(agentInterfType));
 
+                ModuleDefinition.Types.Add(wrapperType);
+                ModuleDefinition.Types.Add(agentInterfType);
+
+                //处理所有Public函数
                 int methodIndex = 0;
                 foreach (var mthDef in typeDef.Methods)
                 {
@@ -92,12 +108,14 @@ namespace Weavers
                     if (!mthDef.IsPublic && !needWrap)
                         continue;
 
-                    if(needWrap)
+                    if (needWrap)
                     {
                         if (!mthDef.IsVirtual)
                             WriteError($"MethodOption标注的函数必须是Virtual函数 {typeDef.FullName}.{mthDef.Name}", mthDef);
                         mthDef.IsPublic = true;
                     }
+
+                    //这两个函数由框架底层调度（Active, Deactive）
                     if (mthDef.Name == "Active" || mthDef.Name == "Deactive")
                         continue;
 
@@ -109,24 +127,24 @@ namespace Weavers
                     }
 
                     //ref out检测
-                    foreach(var para in mthDef.Parameters)
+                    foreach (var para in mthDef.Parameters)
                     {
-                        if(para.IsOut || para.ParameterType.IsByReference)
+                        if (para.IsOut || para.ParameterType.IsByReference)
                         {
                             WriteError($"{typeDef.FullName}.{mthDef.Name} Agent public函数不允许使用ref或者out参数", mthDef);
                             break;
                         }
                     }
 
-                    //设置
+                    //注解设置
                     bool isNotAwait = mthDef.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == "NotAwait") != null;
                     bool isLongTime = mthDef.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == "LongTimeTask") != null;
                     bool isThreadSafe = mthDef.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == "ThreadSafe") != null;
-                    //线程安全则直接执行
+                    //线程安全则直接执行，且没有标记notawait直接跳过不用处理
                     if (isThreadSafe && !isNotAwait)
                         continue;
 
-                    //跳过Agent中override的方法
+                    //构造函数
                     if (mthDef.IsConstructor)
                     {
                         var cons = new MethodDefinition(".ctor", MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, TypeSystem.VoidReference);
@@ -141,15 +159,23 @@ namespace Weavers
                     }
 
                     //将agent的public函数都标记为虚函数
-                    mthDef.IsVirtual = true; 
+                    mthDef.IsVirtual = true;
                     mthDef.IsNewSlot = true; //virtual
                     mthDef.IsFinal = false;  //interface
 
                     bool isGenericMethod = mthDef.GenericParameters.Count > 0;
-                    //public函数生成wrap函数
+
+
+
+                    //为接口生成函数申明
+                    var wrapperInterfMethod = new MethodDefinition(mthDef.Name, mthDef.Attributes, mthDef.ReturnType);
+                    //为wrapper类生成函数申明
                     var wrapperMethod = new MethodDefinition(mthDef.Name, mthDef.Attributes ^ MethodAttributes.NewSlot, mthDef.ReturnType);
                     for (int p = 0; p < mthDef.Parameters.Count; ++p)
+                    {
+                        wrapperInterfMethod.Parameters.Add(mthDef.Parameters[p]);
                         wrapperMethod.Parameters.Add(mthDef.Parameters[p]);
+                    }
                     for (int i = 0; i < mthDef.GenericParameters.Count; i++)
                     {
                         var orgTypeParam = mthDef.GenericParameters[i];
@@ -157,13 +183,17 @@ namespace Weavers
                         foreach (var c in orgTypeParam.Constraints)//where约束
                             targetTypeParam.Constraints.Add(c);
                         wrapperMethod.GenericParameters.Add(targetTypeParam);
+                        wrapperInterfMethod.GenericParameters.Add(targetTypeParam);
                     }
+                    agentInterfType.Methods.Add(wrapperInterfMethod);
                     wrapperType.Methods.Add(wrapperMethod);
+
+
+
+
+                    //注入生成函数体
                     wrapperMethod.Body = new MethodBody(wrapperMethod);
                     var instructions = wrapperMethod.Body.Instructions;
-
-                    
-
 
                     //找到对应的compAgent.Actor函数Ref
                     TypeDefinition stComp = FindBaseCompType(typeDef);
@@ -171,14 +201,25 @@ namespace Weavers
                     getActorMethodDef.IsPublic = true;
                     var getActorMethodRef = ModuleDefinition.ImportReference(getActorMethodDef).MakeGeneric(((GenericInstanceType)(typeDef.BaseType)).GenericArguments[0]);
 
+                    //找到对应的compAgent.IsRemoting函数Ref
+                    var getIsRemotingMethodDef = stComp.Methods.FirstOrDefault(m => m.Name == "get_IsRemoting");
+                    getIsRemotingMethodDef.IsPublic = true;
+                    var getIsRemotingMethodRef = ModuleDefinition.ImportReference(getIsRemotingMethodDef).MakeGeneric(((GenericInstanceType)(typeDef.BaseType)).GenericArguments[0]);
+
+                    //找到对应的compAgent.IsRemoting函数Ref
+                    var getRpcAgentMethodDef = stComp.Methods.FirstOrDefault(m => m.Name == "GetRpcAgent");
+                    getIsRemotingMethodDef.IsPublic = true;
+                    var getRpcAgentMethodRef = ModuleDefinition.ImportReference(getRpcAgentMethodDef).MakeGeneric(agentInterfType);
+
                     MethodReference sendRef;
                     if (mthDef.ReturnType.FullName == "System.Threading.Tasks.Task")
                     {
-                        sendRef = actorSendAsync_Task_Action;// Func<Task>
+                        // Func<Task>
+                        sendRef = actorSendAsync_Task_Action;
                     }
                     else
                     {
-                        if(isNotAwait)
+                        if (isNotAwait)
                         {
                             WriteError($"{typeDef.FullName}.{mthDef.Name} NotAwait返回值只能是Task", mthDef);
                             continue;
@@ -186,7 +227,30 @@ namespace Weavers
                         // Func<Task<T>>
                         sendRef = ModuleDefinition.ImportReference(actorSendAsync_Task_Func_Def.MakeGenericMethod(((GenericInstanceType)(mthDef.ReturnType)).GenericArguments[0]));
                     }
+
+                    //返回值
                     var returnFuncRef = ModuleDefinition.ImportReference(func_def).MakeGeneric(mthDef.ReturnType);
+
+                    //判断是否为远程组件
+                    var ilProcessor = wrapperMethod.Body.GetILProcessor();
+                    //if(IsRemoting)
+                    ilProcessor.Emit(OpCodes.Ldarg_0);
+                    ilProcessor.Emit(OpCodes.Call, getIsRemotingMethodRef);
+                    var lbl_elseEntryPoint_11 = ilProcessor.Create(OpCodes.Nop);
+                    ilProcessor.Emit(OpCodes.Brfalse, lbl_elseEntryPoint_11);
+                    //if body
+
+                    var lbl_elseEnd_12 = ilProcessor.Create(OpCodes.Nop);
+                    ilProcessor.Append(lbl_elseEntryPoint_11);
+                    ilProcessor.Append(lbl_elseEnd_12);
+                    wrapperMethod.Body.OptimizeMacros();
+                    // end if (IsRemoting)
+
+                    //return Task.CompletedTask;
+                    //ilProcessor.Emit(OpCodes.Call, completeTaskRef);
+                    //ilProcessor.Emit(OpCodes.Ret);
+                    //continue;
+
                     //线程安全直接执行
                     //线程安全但是不等待则返回Task.completeTask
                     if (isThreadSafe && isNotAwait)
@@ -297,41 +361,7 @@ namespace Weavers
                     if (wrapperMethod.Parameters.Count > 0)
                     {
                         //创建私有方法,调用Agent函数
-                        var privateMethodDef = new MethodDefinition($"<>Gen_m_{methodIndex}_{mthDef.Name}", MethodAttributes.Private | MethodAttributes.HideBySig, mthDef.ReturnType);
-                        var privateMethodInstructions = privateMethodDef.Body.Instructions;
-                        privateMethodInstructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-                        for (int i = 0; i < mthDef.Parameters.Count; i++)
-                        {
-                            ParameterDefinition param = mthDef.Parameters[i];
-                            privateMethodDef.Parameters.Add(param);
-                            var code = GetCodeByFieldIndex(i + 1);
-                            if (code == OpCodes.Ldarg_S)
-                                privateMethodInstructions.Add(Instruction.Create(code, param));
-                            else
-                                privateMethodInstructions.Add(Instruction.Create(code));
-                        }
-
-                        foreach (var item in mthDef.GenericParameters)
-                        {
-                            var gp = new GenericParameter(item.Name, privateMethodDef);
-                            foreach(var c in item.Constraints)//where约束
-                                gp.Constraints.Add(c);
-                            privateMethodDef.GenericParameters.Add(gp);
-                        }
-
-                        if (isGenericMethod)
-                        {
-                            var result = new GenericInstanceMethod(mthDef);
-                            foreach (var item in mthDef.GenericParameters)
-                                result.GenericArguments.Add(item);
-                            privateMethodInstructions.Add(Instruction.Create(OpCodes.Call, result));
-                        }
-                        else
-                        {
-                            privateMethodInstructions.Add(Instruction.Create(OpCodes.Call, mthDef));
-                        }
-
-                        privateMethodInstructions.Add(Instruction.Create(OpCodes.Ret));
+                        var privateMethodDef = CreateInnerMethod(mthDef, isGenericMethod, methodIndex, getIsRemotingMethodRef, getRpcAgentMethodRef, agentInterfType);
                         wrapperType.Methods.Add(privateMethodDef);
 
                         //创建内部类
@@ -371,7 +401,7 @@ namespace Weavers
                         foreach (var att in mthDef.CustomAttributes)
                         {
                             var attName = att.AttributeType.FullName;
-                            if(attName.StartsWith("Geek.Server.MethodOption"))
+                            if (attName.StartsWith("Geek.Server.MethodOption"))
                                 innerMethod.CustomAttributes.Add(att);
                         }
 
@@ -405,7 +435,7 @@ namespace Weavers
                             wrapperMethod.Body.Variables.Add(new VariableDefinition(genericInnner));
                         else
                             wrapperMethod.Body.Variables.Add(new VariableDefinition(ModuleDefinition.ImportReference(innerWrapper)));
-                    
+
 
                         //构造内部类,并对参数赋值
                         instructions.Append(
@@ -507,6 +537,148 @@ namespace Weavers
             }
             WriteMessage($"AgentWeaver End：{ModuleDefinition.Assembly.Name}", MessageImportance.High);
         }
+
+
+        /// <summary>
+        /// 用于lamada表达式
+        /// </summary>
+        private MethodDefinition CreateInnerMethod(MethodDefinition mthDef, bool isGenericMethod, int methodIndex,
+            MethodReference getIsRemotingMethodRef,
+            MethodReference getRpcAgentMethodRef,
+            TypeDefinition agentInterface)
+        {
+            //创建私有方法,调用Agent函数
+            var privateMethodDef = new MethodDefinition($"<>Gen_m_{methodIndex}_{mthDef.Name}", MethodAttributes.Private | MethodAttributes.HideBySig, mthDef.ReturnType);
+            //处理参数
+            for (int i = 0; i < mthDef.Parameters.Count; i++)
+            {
+                ParameterDefinition param = mthDef.Parameters[i];
+                privateMethodDef.Parameters.Add(param);
+            }
+            foreach (var item in mthDef.GenericParameters)
+            {
+                var gp = new GenericParameter(item.Name, privateMethodDef);
+                foreach (var c in item.Constraints)//where约束
+                    gp.Constraints.Add(c);
+                privateMethodDef.GenericParameters.Add(gp);
+            }
+
+
+            /*********************IsRemoting*****************************/
+            var ilProcessor = privateMethodDef.Body.GetILProcessor();
+            //判断是否为远程组件
+            //if(IsRemoting)
+            ilProcessor.Emit(OpCodes.Ldarg_0);
+            ilProcessor.Emit(OpCodes.Call, getIsRemotingMethodRef);
+            var notRemotingBranch = ilProcessor.Create(OpCodes.Nop); //创建分支
+            ilProcessor.Emit(OpCodes.Brfalse, notRemotingBranch);
+            //if body
+
+            //var foo = GetRpcAgent<Foo>();
+            var lv_foo_15 = new VariableDefinition(agentInterface);
+            privateMethodDef.Body.Variables.Add(lv_foo_15);
+            ilProcessor.Emit(OpCodes.Ldarg_0);
+            var mr_GetRpcAgent_17 = getRpcAgentMethodRef;
+            var gi_GetRpcAgent_18 = new GenericInstanceMethod(mr_GetRpcAgent_17);
+            gi_GetRpcAgent_18.GenericArguments.Add(agentInterface);
+            ilProcessor.Emit(OpCodes.Call, gi_GetRpcAgent_18);
+            ilProcessor.Emit(OpCodes.Stloc, lv_foo_15);
+
+            //return foo.Test(a, list);
+            ilProcessor.Emit(OpCodes.Ldloc, lv_foo_15);
+            for (int i = 0; i < mthDef.Parameters.Count; i++)
+            {
+                ParameterDefinition param = mthDef.Parameters[i];
+                var code = GetCodeByFieldIndex(i + 1);
+                if (code == OpCodes.Ldarg_S)
+                    ilProcessor.Emit(OpCodes.Ldarg_S, param);
+                else
+                    ilProcessor.Emit(code);
+            }
+            ilProcessor.Emit(OpCodes.Callvirt, privateMethodDef);
+            ilProcessor.Emit(OpCodes.Ret);
+            var lbl_elseEnd_20 = ilProcessor.Create(OpCodes.Nop);
+            ilProcessor.Append(notRemotingBranch);
+            ilProcessor.Append(lbl_elseEnd_20);
+            ilProcessor.Body.OptimizeMacros();
+            // end if (IsRemoting)
+            /*********************IsRemoting*****************************/
+
+
+            var privateMethodInstructions = privateMethodDef.Body.Instructions;
+            privateMethodInstructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+            for (int i = 0; i < mthDef.Parameters.Count; i++)
+            {
+                ParameterDefinition param = mthDef.Parameters[i];
+                var code = GetCodeByFieldIndex(i + 1);
+                if (code == OpCodes.Ldarg_S)
+                    privateMethodInstructions.Add(Instruction.Create(code, param));
+                else
+                    privateMethodInstructions.Add(Instruction.Create(code));
+            }
+
+            if (isGenericMethod)
+            {
+                var result = new GenericInstanceMethod(mthDef);
+                foreach (var item in mthDef.GenericParameters)
+                    result.GenericArguments.Add(item);
+                privateMethodInstructions.Add(Instruction.Create(OpCodes.Call, result));
+            }
+            else
+            {
+                privateMethodInstructions.Add(Instruction.Create(OpCodes.Call, mthDef));
+            }
+
+            privateMethodInstructions.Add(Instruction.Create(OpCodes.Ret));
+            return privateMethodDef;
+        }
+
+
+
+        //private void ThreadSafe_NotAwait(bool hasParam, bool isGenericMethod, Collection<Instruction> instructions, MethodDefinition mthDef)
+        //{
+        //    if (hasParam)
+        //    {
+        //        instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+        //        for (int i = 0; i < mthDef.Parameters.Count; i++)
+        //        {
+        //            ParameterDefinition param = mthDef.Parameters[i];
+        //            var code = GetCodeByFieldIndex(i + 1);
+        //            if (code == OpCodes.Ldarg_S)
+        //                instructions.Add(Instruction.Create(code, param));
+        //            else
+        //                instructions.Add(Instruction.Create(code));
+        //        }
+
+        //        if (isGenericMethod)
+        //        {
+        //            var result = new GenericInstanceMethod(mthDef);
+        //            foreach (var item in mthDef.GenericParameters)
+        //                result.GenericArguments.Add(item);
+        //            instructions.Add(Instruction.Create(OpCodes.Call, result));
+        //        }
+        //        else
+        //        {
+        //            instructions.Add(Instruction.Create(OpCodes.Call, mthDef));
+        //        }
+
+        //        instructions.Append(
+        //            Instruction.Create(OpCodes.Pop),
+        //            Instruction.Create(OpCodes.Call, completeTaskRef),
+        //            Instruction.Create(OpCodes.Ret));
+        //    }
+        //    else
+        //    {
+        //        var ldloc0 = Instruction.Create(OpCodes.Ldloc_1);
+        //        instructions.Append(
+        //            Instruction.Create(OpCodes.Nop),
+        //            Instruction.Create(OpCodes.Ldarg_0),//this
+        //            Instruction.Create(OpCodes.Call, mthDef),//base.func
+        //            Instruction.Create(OpCodes.Pop),
+        //            Instruction.Create(OpCodes.Call, completeTaskRef),
+        //            Instruction.Create(OpCodes.Ret));
+        //    }
+        //}
 
         private static TypeDefinition FindBaseCompType(TypeDefinition typeDef)
         {
