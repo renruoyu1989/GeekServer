@@ -97,15 +97,16 @@ namespace Weavers
                     continue;
                 }
 
+                //创建interface
+                agentInterfType = new TypeDefinition("Wrapper.Agent", "I" + typeDef.Name, TypeAttributes.Interface | TypeAttributes.Abstract | TypeAttributes.Public);
+                agentInterfType.IsInterface = true;
+                ModuleDefinition.Types.Add(agentInterfType);
+
                 //创建wrapper
                 wrapperType = new TypeDefinition("Wrapper.Agent", typeDef.Name + "Wrapper", typeDef.Attributes, typeDef);
-                //创建interface
-                agentInterfType = new TypeDefinition("Wrapper.Agent", "I" + typeDef.Name, typeDef.Attributes);
-                agentInterfType.IsInterface = true;
                 wrapperType.Interfaces.Add(new InterfaceImplementation(agentInterfType));
-
                 ModuleDefinition.Types.Add(wrapperType);
-                ModuleDefinition.Types.Add(agentInterfType);
+                
 
                 //处理所有Public函数
                 int methodIndex = 0;
@@ -176,7 +177,9 @@ namespace Weavers
                     bool isGenericMethod = mthDef.GenericParameters.Count > 0;
 
                     //为接口生成函数申明
-                    var wrapperInterfMethod = new MethodDefinition(mthDef.Name, mthDef.Attributes, mthDef.ReturnType);
+                    //var wrapperInterfMethod = new MethodDefinition(mthDef.Name, mthDef.Attributes, mthDef.ReturnType);
+                    var wrapperInterfMethod = new MethodDefinition(mthDef.Name, MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Virtual 
+                        | MethodAttributes.NewSlot | MethodAttributes.Abstract, mthDef.ReturnType);
                     //为wrapper类生成函数申明
                     wrapperMethod = new MethodDefinition(mthDef.Name, mthDef.Attributes ^ MethodAttributes.NewSlot, mthDef.ReturnType);
                     for (int p = 0; p < mthDef.Parameters.Count; ++p)
@@ -213,10 +216,10 @@ namespace Weavers
                     getIsRemotingMethodDef.IsPublic = true;
                     getIsRemotingMethodRef = ModuleDefinition.ImportReference(getIsRemotingMethodDef).MakeGeneric(((GenericInstanceType)(typeDef.BaseType)).GenericArguments[0]);
 
-                    //找到对应的compAgent.IsRemoting函数Ref
+                    //找到对应的compAgent.GetRpcAgent函数Ref
                     var getRpcAgentMethodDef = stComp.Methods.FirstOrDefault(m => m.Name == "GetRpcAgent");
                     getIsRemotingMethodDef.IsPublic = true;
-                    getRpcAgentMethodRef = ModuleDefinition.ImportReference(getRpcAgentMethodDef).MakeGeneric(agentInterfType);
+                    getRpcAgentMethodRef = ModuleDefinition.ImportReference(getRpcAgentMethodDef).MakeGeneric(((GenericInstanceType)(typeDef.BaseType)).GenericArguments[0]);
 
                     MethodReference sendRef;
                     if (mthDef.ReturnType.FullName == "System.Threading.Tasks.Task")
