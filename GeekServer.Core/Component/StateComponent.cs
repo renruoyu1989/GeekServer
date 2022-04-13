@@ -152,7 +152,7 @@ namespace Geek.Server
                 {
                     LOGGER.Error("存数据库失败，可以先存到磁盘");
                     FileBackUp.StoreToFile(list);
-                    await ExceptionMonitor.Send($"【{Settings.Ins.ServerId}+{Settings.Ins.serverName}】 存数据库失败，先存到磁盘，起服时请务必修改server_config.json配置恢复数据");
+                    await ExceptionMonitor.Send($"【{Settings.Ins.ServerId}+{Settings.Ins.ServerName}】 存数据库失败，先存到磁盘，起服时请务必修改server_config.json配置恢复数据");
                 }
                 else
                 {

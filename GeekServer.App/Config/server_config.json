@@ -1,26 +1,13 @@
 {
-	"IsDebug": true,
-	"ServerId": 10001, //[最大131072(取10000到99999)]
-	"LocalId": "192.168.0.163",
-	"TcpPort": 10000,
-	"XrpcPort": 30000,
-
-	"UseLibuv": true,
-
-	"TimerSaveMax": 360, //定制回存(秒)
-	"TimerSaveMin": 300,
-
-	"CompRecycleTime": 15, //分
-	"ActorRecycleTime": 30,
-
-	"HttpInnerCode": "geek_server_http_inner_code",
-	"HttpCode": "geek_server_http_code",
-	"HttpUrl": "/geek/server/logic",
-	"HttpPort": 20000,
-
-	"MongoDB": "geek_game",
-	//"MongoUrl": "mongodb://192.168.1.214:6666?maxPoolSize=50&waitQueueMultiple=100&compressors=zlib",
-	"MongoUrl": "mongodb://localhost:27017?maxPoolSize=50&waitQueueMultiple=100&compressors=zlib",
-
-	"Language": "chinese"
+  "IsDebug": true,
+  "ServerId": 10001, //[最大131072(取10000到99999)]
+  "InstanceId": 10001, //[最大131072(取10000到99999)]
+  "ServerName": "Gate", //Gate_10001
+  "LocalIp": "192.168.0.163",
+  "TcpPort": 10000,
+  "GrpcPort": 30000,
+  "HttpPort": 20000,
+  "NacosUrl": "http://192.168.0.163:8848",
+  "NacosDataID": "common_config",
+  "NacosGroup": "10000"
 }

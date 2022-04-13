@@ -3,6 +3,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using Mono.Collections.Generic;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -38,6 +39,14 @@ namespace Weavers
                 WriteError("获取Geek.Server.BaseComponent.Actor属性失败");
                 return;
             }
+
+            var rpcServiceDef = FindTypeDefinition("EventNext.ServiceAttribute");
+            if (rpcServiceDef == null)
+            {
+                WriteError("获取EventNext.ServiceAttribute类型失败");
+                return;
+            }
+            var rpcServiceRef = ModuleDefinition.ImportReference(rpcServiceDef);
 
             var taskDef = FindTypeDefinition("System.Threading.Tasks.Task");
             var completeTaskDef = taskDef.Methods.FirstOrDefault(md => md.Name == "get_CompletedTask");
@@ -106,7 +115,22 @@ namespace Weavers
                 wrapperType = new TypeDefinition("Wrapper.Agent", typeDef.Name + "Wrapper", typeDef.Attributes, typeDef);
                 wrapperType.Interfaces.Add(new InterfaceImplementation(agentInterfType));
                 ModuleDefinition.Types.Add(wrapperType);
-                
+
+                //添加RPC注解
+                var serviceAttConsDef = rpcServiceDef.Methods.LastOrDefault(md => md.Name == ".ctor");
+                var catt = new CustomAttribute(ModuleDefinition.ImportReference(serviceAttConsDef));
+                var cattArg1 = new CustomAttributeArgument(ModuleDefinition.ImportReference(typeof(Type)), ModuleDefinition.ImportReference(agentInterfType));
+                CustomAttributeArgument[] args = new CustomAttributeArgument[1];
+                args[0] = cattArg1;
+                var cattArg = new CustomAttributeArgument(ModuleDefinition.ImportReference(typeof(Type[])), args);
+                catt.ConstructorArguments.Add(cattArg);
+                wrapperType.CustomAttributes.Add(catt);
+
+                //传递注解
+                //foreach (var c in typeDef.CustomAttributes)
+                //{
+                //    wrapperType.CustomAttributes.Add(c);
+                //}
 
                 //处理所有Public函数
                 int methodIndex = 0;
@@ -262,7 +286,7 @@ namespace Weavers
                     if (wrapperMethod.Parameters.Count > 0)
                     {
                         //创建私有方法,调用Agent函数
-                        CreateInnerMethod(mthDef, isGenericMethod, methodIndex, getIsRemotingMethodRef, getRpcAgentMethodRef, agentInterfType);
+                        CreateInnerMethod(wrapperInterfMethod, mthDef, isGenericMethod, methodIndex, getIsRemotingMethodRef, getRpcAgentMethodRef, agentInterfType);
                         wrapperType.Methods.Add(privateMethodDef);
                         //创建内部类
                         CreateInnerClass(mthDef, methodIndex, privateMethodDef);
@@ -554,7 +578,7 @@ namespace Weavers
         /// <summary>
         /// 创建内部类的外部调用函数
         /// </summary>
-        private void CreateInnerMethod(MethodDefinition mthDef, bool isGenericMethod, int methodIndex,
+        private void CreateInnerMethod(MethodDefinition wrapperInterfMethod, MethodDefinition mthDef, bool isGenericMethod, int methodIndex,
             MethodReference getIsRemotingMethodRef,
             MethodReference getRpcAgentMethodRef,
             TypeDefinition agentInterface)
@@ -606,7 +630,7 @@ namespace Weavers
                 else
                     ilProcessor.Emit(code);
             }
-            ilProcessor.Emit(OpCodes.Callvirt, privateMethodDef);
+            ilProcessor.Emit(OpCodes.Callvirt, wrapperInterfMethod); //调用wrapper的方法
             ilProcessor.Emit(OpCodes.Ret);
             var lbl_elseEnd_20 = ilProcessor.Create(OpCodes.Nop);
             ilProcessor.Append(notRemotingBranch);
@@ -717,6 +741,7 @@ namespace Weavers
 
         public override IEnumerable<string> GetAssembliesForScanning()
         {
+            yield return "EventNext";
             yield return "System";
             yield return "mscorlib";
             yield return "GeekServer.Core";

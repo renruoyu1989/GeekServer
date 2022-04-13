@@ -7,6 +7,8 @@ namespace Geek.Server
 {
     public class EntityMgr
     {
+        //[EntityType-RemoteEntity]远程的实体，只会存储一个，这种实体组件的state为null
+        static readonly ConcurrentDictionary<int, RemoteEntity> remoteEntityMap = new ConcurrentDictionary<int, RemoteEntity>();
         static readonly ConcurrentDictionary<long, Entity> entityMap = new ConcurrentDictionary<long, Entity>();
         static readonly ConcurrentDictionary<long, DateTime> activeTimeMap = new ConcurrentDictionary<long, DateTime>();
         public static Func<long, int> ID2Type { get; set; }
@@ -52,7 +54,7 @@ namespace Geek.Server
             var type = compAgentType.BaseType;
             if (type.IsGenericType)
             {
-                //Agent是不能被二次继承的,所以直接取泛型参数是安全的
+                //Agent是不能被二次继承的,所以直接取泛型参数是安全的(优化：可在解析dll的时候缓存)
                 return await GetCompAgentByCompType(entityId, type.GenericTypeArguments[0]);
             }
             return null;
@@ -60,9 +62,45 @@ namespace Geek.Server
 
         public static async Task<IComponentAgent> GetCompAgentByCompType(long entityId, Type compType)
         {
-            var entity = await GetOrNewEntity(entityId);
-            return await entity.GetCompAgent(compType);
+            if (IsRemoteEntity(entityId))
+            {
+                var entityType = ID2Type(entityId);
+                remoteEntityMap.TryGetValue(entityType, out RemoteEntity entity);
+                if (entity == null)
+                {
+                    lock (remoteEntityMap)
+                    {
+                        remoteEntityMap.TryGetValue(entityType, out entity);
+                        if (entity == null)
+                        {
+                            entity = new RemoteEntity(entityType, entityId);
+                            remoteEntityMap.TryAdd(entityType, entity);
+                        }
+                    }
+                }
+                return await entity.GetCompAgent(compType);
+            }
+            else
+            {
+                var entity = await GetOrNewEntity(entityId);
+                return await entity.GetCompAgent(compType);
+            }
         }
+
+
+        /// <summary>
+        /// 是否为远程实体
+        /// </summary>
+        /// <param name="entityId"></param>
+        /// <returns></returns>
+        public static bool IsRemoteEntity(long entityId)
+        {
+            int type = ID2Type(entityId);
+            if(type == 20)
+                return true;
+            return false;
+        }
+
 
         public static Task<bool> IsCompActive(long entityId, Type compType)
         {

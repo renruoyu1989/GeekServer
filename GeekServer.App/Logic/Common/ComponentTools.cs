@@ -2,6 +2,7 @@
 using Geek.Server.Logic.Login;
 using Geek.Server.Logic.Role;
 using Geek.Server.Logic.Server;
+using Geek.Server.Logic.Test;
 
 namespace Geek.Server
 {
@@ -22,6 +23,8 @@ namespace Geek.Server
             //role
             RegistRoleComp<RoleComp>();
             RegistRoleComp<BagComp>();
+
+            RegistServerComp<TestComp>(EntityType.Test);
 
             //设置实体共享actor (默认为true)
             //CompSetting.Singleton.SetIfEntityCompShareActor((int)EntityType.Role, true);

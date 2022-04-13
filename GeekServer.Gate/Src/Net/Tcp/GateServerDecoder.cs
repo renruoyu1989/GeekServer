@@ -77,28 +77,33 @@ namespace Geek.Server
 
 
                 //根据消息id，进行分发：游戏服，登录服，聊天服
-
-
-                var msg = TcpHandlerFactory.GetMsg(msgId);
-                if (msg == null)
+                if (Settings.Ins.LoginMsgId == msgId)
                 {
-                    LOGGER.Error("消息ID:{} 找不到对应的Msg.", msgId);
-                    return;
+                    ServiceManager.Singleton.Select(ServiceManager.Login_Service);
                 }
                 else
                 {
-                    if (msg.MsgId == msgId)
-                    {
-                        msg.Deserialize(msgData);
-                    }
-                    else
-                    {
-                        LOGGER.Error("后台解析消息失败，注册消息id和消息无法对应.real:{0}, register:{1}", msg.MsgId, msgId);
-                        return;
-                    }
+                    ServiceManager.Singleton.Select(ServiceManager.Game_Service);
                 }
-                output.Add(msg);
-
+                //var msg = TcpHandlerFactory.GetMsg(msgId);
+                //if (msg == null)
+                //{
+                //    LOGGER.Error("消息ID:{} 找不到对应的Msg.", msgId);
+                //    return;
+                //}
+                //else
+                //{
+                //    if (msg.MsgId == msgId)
+                //    {
+                //        msg.Deserialize(msgData);
+                //    }
+                //    else
+                //    {
+                //        LOGGER.Error("后台解析消息失败，注册消息id和消息无法对应.real:{0}, register:{1}", msg.MsgId, msgId);
+                //        return;
+                //    }
+                //}
+                //output.Add(msg);
             }
             catch (Exception e)
             {

@@ -35,7 +35,7 @@ namespace Geek.Server
             }
 
             LOGGER.Info($"提交监控 exp={exp} msg={msg}");
-            string content = $"【{Settings.Ins.ServerId}+{Settings.Ins.serverName}】 发生异常：" + exp.ToString() + "\n" + msg;
+            string content = $"【{Settings.Ins.ServerId}+{Settings.Ins.ServerName}】 发生异常：" + exp.ToString() + "\n" + msg;
             await Send(content);
         }
 
@@ -47,8 +47,8 @@ namespace Geek.Server
         /// <returns></returns>
         public static async Task Send(string content)
         {
-            var monitorUrl = Settings.Ins.monitorUrl;
-            var secret = Settings.Ins.monitorKey;
+            var monitorUrl = Settings.Ins.MonitorUrl;
+            var secret = Settings.Ins.MonitorKey;
 
             if(!string.IsNullOrEmpty(monitorUrl) || !string.IsNullOrEmpty(secret))
                 return;

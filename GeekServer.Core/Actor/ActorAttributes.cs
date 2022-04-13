@@ -10,7 +10,6 @@ namespace Geek.Server
     [AttributeUsage(AttributeTargets.Method)]
     public class InterleaveWhenDeadlock : Attribute { }
 
-    
     public class MethodOption
     {
         ///<summary>此方法将不等待(强制入队执行)</summary>

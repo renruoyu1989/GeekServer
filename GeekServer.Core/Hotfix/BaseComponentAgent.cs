@@ -15,6 +15,24 @@ namespace Geek.Server
         public long EntityId => Owner.EntityId;
         internal WorkerActor Actor => Owner.Actor;
 
+
+        public bool IsRemoting { get; set; } = false;
+        private static object rpcAgent;
+        private static object lockObj = new object();
+        public T GetRpcAgent<T>()
+        {
+            lock (lockObj)
+            {
+                if (rpcAgent == null)
+                {
+                    var temp = RpcClient.Create<T>();
+                    rpcAgent = temp;
+                    return temp;
+                }
+                return (T)rpcAgent;
+            }
+        }
+
         /// <summary>
         /// 等待waitComp的之前的逻辑先执行完再回到当前actor执行callback
         /// </summary>

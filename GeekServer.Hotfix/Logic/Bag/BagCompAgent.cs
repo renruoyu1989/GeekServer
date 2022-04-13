@@ -1,9 +1,14 @@
 ﻿using Geek.Server.Proto;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using EventNext;
+using System;
 
 namespace Geek.Server.Logic.Bag
 {
+
+    [Service(typeof(ISerializable), Name = "fff", SingleInstance = true)]
+    [Obsolete("this is a test")]
     public class BagCompAgent : StateComponentAgent<BagComp, BagState>
     {
         public Task Init()
@@ -83,6 +88,11 @@ namespace Geek.Server.Logic.Bag
 
         public virtual Task Test5(int a, List<int> list)
         {
+            if (IsRemoting)
+            {
+                ISerializable ser = null;
+                ser.Deserialize(null);
+            }
             return Task.CompletedTask;
         }
 

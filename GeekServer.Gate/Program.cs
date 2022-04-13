@@ -5,9 +5,6 @@ using System.Threading.Tasks;
 using NLog;
 using NLog.LayoutRenderers;
 
-/// <summary>
-/// 网关服务器
-/// </summary>
 namespace Geek.Server
 {
     class Program
@@ -22,21 +19,7 @@ namespace Geek.Server
             try
             {
                 AppExitHandler.Init(HandleExit);
-                Console.WriteLine("init NLog config...");
-                LayoutRenderer.Register<NLogConfigurationLayoutRender>("logConfiguration");
-                LogManager.Configuration = new XmlLoggingConfiguration("Config/NLog.config");
-                LogManager.AutoShutdown = false;
-                Settings.Load("Config/server_config.json", ServerType.Game);
-
-                LOGGER.Warn("check restore data...");
-                if (!FileBackUp.CheckRestoreFromFile())
-                {
-                    ExceptionMonitor.Report(ExceptionType.StartFailed, "check restore from file失败")
-                        .Wait(TimeSpan.FromSeconds(10));
-                    return;
-                }
-
-                GameloopTask = GameLoop.Enter();
+                GameloopTask = GateStartUp.Enter();
                 GameloopTask.Wait();
 
                 if (ShutDownTask != null)
@@ -45,13 +28,9 @@ namespace Geek.Server
             catch (Exception e)
             {
                 if (Settings.Ins.AppRunning)
-                {
                     ExceptionMonitor.Report(ExceptionType.UnhandledException, $"{e}").Wait(TimeSpan.FromSeconds(10));
-                }
                 else
-                {
                     ExceptionMonitor.Report(ExceptionType.StartFailed, $"{e}").Wait(TimeSpan.FromSeconds(10));
-                }
             }
         }
 

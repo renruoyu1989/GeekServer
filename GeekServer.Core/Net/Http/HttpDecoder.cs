@@ -23,7 +23,7 @@ namespace Geek.Server
                 string uri = request.Uri;
                 QueryStringDecoder queryStringDecoder = new QueryStringDecoder(uri);
                 string path = queryStringDecoder.Path;
-                if (!path.Equals(Settings.Ins.httpUrl))
+                if (!path.Equals(Settings.Ins.HttpUrl))
                 {
                     await ctx.CloseAsync();
                     return;

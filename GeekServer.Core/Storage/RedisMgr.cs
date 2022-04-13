@@ -13,7 +13,7 @@ namespace Geek.Server
 
         public static void Init()
         {
-            string configString = Settings.Ins.redisConfig;
+            string configString = Settings.Ins.RedisUrl;
             var options = ConfigurationOptions.Parse(configString);
             options.AllowAdmin = true;// 允许使用range | keys *等危险操作
             options.CheckCertificateRevocation = false;
@@ -88,7 +88,7 @@ namespace Geek.Server
         private static ConcurrentDictionary<Type, string> cacheKeys = new ConcurrentDictionary<Type, string>();
 
         private static readonly Type rootType = typeof(RedisKeys);
-        private static readonly string DATA_CENTER = Settings.Ins.dataCenter;
+        private static readonly string DATA_CENTER = Settings.Ins.DataCenter;
 
         public static void Init()
         {

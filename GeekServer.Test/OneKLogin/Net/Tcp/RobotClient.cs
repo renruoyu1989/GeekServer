@@ -45,7 +45,6 @@ namespace Geek.Server.Test
             catch (Exception e)
             {
                 LOGGER.Error(e.ToString());
-                throw e;
             }
         }
 
@@ -63,7 +62,7 @@ namespace Geek.Server.Test
             catch (Exception e)
             {
                 LOGGER.Error(e.ToString());
-                throw e;
+                return default;
             }
         }
 

@@ -2,9 +2,10 @@
 using Microsoft.Extensions.Logging;
 using Nacos.V2;
 using Nacos.V2.DependencyInjection;
-using Nacos.V2.Naming.Event;
-using Nacos.V2.Utils;
+using Nacos.V2.Naming.Dtos;
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Geek.Server
@@ -19,22 +20,29 @@ namespace Geek.Server
         public NacosClient()
         {
             IServiceCollection services = new ServiceCollection();
-
             services.AddNacosV2Config(x =>
             {
-                x.ServerAddresses = new System.Collections.Generic.List<string> { "http://localhost:8848/" };
+                x.ServerAddresses = new System.Collections.Generic.List<string> { Settings.Ins.NacosUrl };
                 x.EndPoint = "";
-                x.Namespace = "cs-test";
-
-                /*x.UserName = "nacos";
-                x.Password = "nacos";*/
-
+                x.Namespace = "GeekServer";
+                x.UserName = "nacos";
+                x.Password = "nacos";
                 // swich to use http or rpc
                 x.ConfigUseRpc = true;
             });
 
-            services.AddLogging(builder => { builder.AddConsole(); });
+            services.AddNacosV2Naming(x =>
+            {
+                x.ServerAddresses = new System.Collections.Generic.List<string> { Settings.Ins.NacosUrl };
+                x.EndPoint = "";
+                x.Namespace = "GeekServer";
+                x.UserName = "nacos";
+                x.Password = "nacos";
+                // swich to use http or rpc
+                x.NamingUseRpc = true;
+            });
 
+            services.AddLogging(builder => { builder.AddConsole(); });
             IServiceProvider serviceProvider = services.BuildServiceProvider();
             configSvc = serviceProvider.GetService<INacosConfigService>();
             namingSvc = serviceProvider.GetService<INacosNamingService>();
@@ -59,69 +67,56 @@ namespace Geek.Server
         }
 
 
-        public async Task Subscribe(string configId, string group)
+        public async Task Subscribe(string configId, string group, Nacos.V2.IListener configListener=null)
         {
-            var listener = new ConfigListener();
-            await configSvc.AddListener(configId, group, listener);
+            if (configListener == null)
+                configListener = new ConfigListener();
+            await configSvc.AddListener(configId, group, configListener);
         }
 
-
+        /// <summary>
+        /// 默认监听器
+        /// </summary>
         class ConfigListener : Nacos.V2.IListener
         {
             public void ReceiveConfigInfo(string configInfo)
             {
+                if (string.IsNullOrEmpty(configInfo))
+                    return;
+                try
+                {
+                    LOGGER.Info("ConfigChanged:" + configInfo);
+                    Settings.Ins.Nacos = JsonConvert.DeserializeObject<NacosSetting>(configInfo);
+                }
+                catch (Exception e)
+                {
+                    LOGGER.Error($"解析NacosConfig失败:{configInfo},{e}");
+                }
             }
         }
         #endregion
 
 
         #region 注册发现
-        protected virtual async Task RegisterInstance()
+        public async Task RegisterInstance(string serviceName, string ip, int port)
         {
-            //GateWay_10001 Login_10001 Logic_10001
-            var serviceName = $"reg-{Guid.NewGuid().ToString()}";
-            var ip = "127.0.0.1";
-            var port = 9999;
-            await namingSvc.RegisterInstance(serviceName, ip, port);
+            await namingSvc.RegisterInstance(serviceName, Settings.Ins.NacosGroup, ip, port);
         }
 
-        protected virtual async Task DeregisterInstance()
+        public  async Task DeregisterInstance(string serviceName, string ip, int port)
         {
-            var serviceName = $"reg-{Guid.NewGuid().ToString()}";
-            var ip = "127.0.0.1";
-            var port = 9999;
-            await namingSvc.DeregisterInstance(serviceName, ip, port);
+            await namingSvc.DeregisterInstance(serviceName, Settings.Ins.NacosGroup, ip, port);
         }
 
-        protected virtual async Task Subscribe()
+        public  async Task Subscribe(string serviceName, Nacos.V2.IEventListener namingListerner)
         {
-            var serviceName = $"sub-{Guid.NewGuid().ToString()}";
-            var ip = "127.0.0.3";
-            var port = 9999;
-            var listerner = new NamingListerner();
-            await namingSvc.Subscribe(serviceName, listerner);
-            await namingSvc.RegisterInstance(serviceName, "127.0.0.4", 9999);
+            await namingSvc.Subscribe(serviceName, Settings.Ins.NacosGroup, namingListerner);
         }
 
-
-        class NamingListerner : Nacos.V2.IEventListener
+        public async Task<List<Instance>> GetAllInstances(string serviceName, bool subscribe=true)
         {
-
-            static readonly NLog.Logger LOGGER = NLog.LogManager.GetCurrentClassLogger();
-
-            public async Task OnEvent(IEvent @event)
-            {
-                LOGGER.Info($"NamingListerner, {@event.ToJsonString()}");
-                var instancesChangeEvent = @event as InstancesChangeEvent;
-                if (instancesChangeEvent == null)
-                {
-                    return;
-                }
-                //await _serverRegister.CreateServerListener(instancesChangeEvent.ServiceName);
-                //await _serverRegister.UpdateServer(instancesChangeEvent.ServiceName, instancesChangeEvent.Hosts);
-            }
+            return await namingSvc.GetAllInstances(serviceName, Settings.Ins.NacosGroup, subscribe);
         }
-
         #endregion
 
     }

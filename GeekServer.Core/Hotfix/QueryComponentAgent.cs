@@ -15,6 +15,24 @@ namespace Geek.Server
         protected TComp Comp => (TComp)Owner;
         public long EntityId => Owner.EntityId;
 
+
+        public bool IsRemoting { get; set; } = false;
+        private static object rpcAgent;
+        private static object lockObj = new object();
+        public T GetRpcAgent<T>()
+        {
+            lock (lockObj)
+            {
+                if (rpcAgent == null)
+                {
+                    var temp = RpcClient.Create<T>();
+                    rpcAgent = temp;
+                    return temp;
+                }
+                return (T)rpcAgent;
+            }
+        }
+
         public async Task Foreach<T>(IEnumerable<T> itor, Func<T, Task> dealFunc)
         {
             await Actor.SendAsync(async () => {

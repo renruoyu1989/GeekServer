@@ -15,7 +15,7 @@ namespace Geek.Server
         static readonly NLog.Logger LOGGER = NLog.LogManager.GetCurrentClassLogger();
 
         DllLoader dllLoader;
-        internal Assembly HotfixAssembly { get; private set; }
+        public Assembly HotfixAssembly { get; private set; }
         public IHotfixBridge HotfixBridge { get; private set; }
 
         //actor-actorAgent, comp-compAgent
@@ -99,9 +99,9 @@ namespace Geek.Server
             catch (Exception e)
             {
                 if (!isReload)
-                    throw e;
+                    throw new Exception(e.ToString());
                 LOGGER.Info("hotfix dll init failed..." + e.ToString());
-                            }
+            }
             return Task.FromResult(success);
         }
 

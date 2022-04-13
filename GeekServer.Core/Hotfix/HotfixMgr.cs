@@ -11,7 +11,7 @@ namespace Geek.Server
 {
     public class HotfixMgr
     {
-        static HotfixModule module = null;
+        public static HotfixModule module { get; private set; } = null;
         //更新dll后可能有老代码正在跑，老代码拿agent需要返回老dll中的agent
         static readonly ConcurrentDictionary<int, HotfixModule> oldModuleMap = new ConcurrentDictionary<int, HotfixModule>();
         public volatile static bool DoingHotfix;//是否正在热更

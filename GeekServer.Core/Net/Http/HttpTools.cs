@@ -13,14 +13,15 @@ namespace Geek.Server
             HttpClient.Timeout = TimeSpan.FromMilliseconds(5000L);
         }
 
-        public static async Task<string> GetServerHttpUrl(int serverId)
+        public static Task<string> GetServerHttpUrl(int serverId)
         {
             //ServerConfig serverConfig = await ConsulUtils.GetServerConfig(serverId);
-            ServerConfig serverConfig = await ServerInfoUtils.GetServerConfig(serverId);
-            if (serverConfig == null)
-                return "";
-            var httpUrl = $"http://{serverConfig.Ip}:{serverConfig.HttpPort}{Settings.Ins.httpUrl}";
-            return httpUrl;
+            //ServerConfig serverConfig = await ServerInfoUtils.GetServerConfig(serverId);
+            //if (serverConfig == null)
+            //    return "";
+            //var httpUrl = $"http://{serverConfig.Ip}:{serverConfig.HttpPort}{Settings.Ins.httpUrl}";
+            //return httpUrl;
+            return default;
         }
     }
 }

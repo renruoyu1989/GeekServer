@@ -78,7 +78,6 @@ namespace Geek.Server.Logic.Login
                     SdkType = sdkType
                 };
             });
-
             Comp.PlayerMap[playerId] = state;
             if (state.RoleMap.TryGetValue(Settings.Ins.ServerId, out var roleId2))
                 return roleId2;

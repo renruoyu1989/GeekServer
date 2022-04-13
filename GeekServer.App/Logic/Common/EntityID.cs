@@ -25,6 +25,7 @@ namespace Geek.Server
         Server,
         Center,
         Login,
+        Test,
     }
 
     /// <summary>

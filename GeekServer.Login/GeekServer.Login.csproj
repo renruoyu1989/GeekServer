@@ -17,4 +17,8 @@
 		<OutputPath>../app</OutputPath>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\GeekServer.Core\GeekServer.Core.csproj" />
+	</ItemGroup>
+
 </Project>

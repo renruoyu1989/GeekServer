@@ -18,15 +18,15 @@ namespace Geek.Server
             {
                 LOGGER.Warn("need restore...");
 
-                if(!Settings.Ins.restoreFromFile)
+                if(!Settings.Ins.RestoreFromFile)
                 {
                     LOGGER.Error("can not restore from file, please modify config file named 'server_config.json'...");
                     return false;
                 }
                 try
                 {
-                    LOGGER.Warn($"connect mongo {Settings.Ins.mongoDB} {Settings.Ins.mongoUrl}...");
-                    MongoDBConnection.Singleton.Connect(Settings.Ins.mongoDB, Settings.Ins.mongoUrl);
+                    LOGGER.Warn($"connect mongo {Settings.Ins.MongoDB} {Settings.Ins.MongoUrl}...");
+                    MongoDBConnection.Singleton.Connect(Settings.Ins.MongoDB, Settings.Ins.MongoUrl);
                     var curDataBase = MongoDBConnection.Singleton.CurDateBase;
                     DirectoryInfo root = new DirectoryInfo(folder);
                     foreach (var dir in root.GetDirectories())

@@ -60,7 +60,7 @@ namespace Geek.Server
                     return new HttpResult(HttpResult.Code_Illegal, "http命令已过期");
                 }
 
-                var str = Settings.Ins.httpInnerCode + time;
+                var str = Settings.Ins.HttpInnerCode + time;
                 if (sign == GetStringSign(str, true))
                     return "";
                 else
@@ -77,7 +77,7 @@ namespace Geek.Server
                 var sign = paramMap["sign"];
                 var code = paramMap["code"];
 
-                var str = Settings.Ins.httpCode + code;
+                var str = Settings.Ins.HttpCode + code;
                 if (sign == GetStringSign(str, false))
                     return "";
                 else
