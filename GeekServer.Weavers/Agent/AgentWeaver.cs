@@ -615,11 +615,18 @@ namespace Weavers
             innerWrapper.Fields.Add(new FieldDefinition($"outer", FieldAttributes.Public, wrapperType));
             foreach (ParameterDefinition pd in mthDef.Parameters)
             {
-                //if (pd.ParameterType.IsGenericInstance)
-                //{
-                //    WriteError(pd.ParameterType.Name);
-                //}
-                innerWrapper.Fields.Add(new FieldDefinition(pd.Name, FieldAttributes.Public, pd.ParameterType));
+                var fieldType = pd.ParameterType;
+                if (fieldType is GenericParameter gp)
+                {
+                    foreach (var _gp in innerWrapper.GenericParameters)
+                    {
+                        if (_gp.Name == gp.Name)
+                        {
+                            fieldType = _gp;
+                        }
+                    }
+                }
+                innerWrapper.Fields.Add(new FieldDefinition(pd.Name, FieldAttributes.Public, fieldType));
             }
 
             //函数调用wrapper私有函数
