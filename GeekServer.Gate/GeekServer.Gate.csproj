@@ -19,6 +19,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\GeekServer.Core\GeekServer.Core.csproj" />
+	  <ProjectReference Include="..\GeekServer.Login\GeekServer.Login.csproj" />
 	</ItemGroup>
 
 </Project>

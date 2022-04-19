@@ -13,12 +13,6 @@ namespace Geek.Server
             //开服时间设定
             try
             {
-                LOGGER.Info("regist components...");
-                ComponentTools.RegistAll();
-
-                LOGGER.Info("load hotfix module...");
-                await HotfixMgr.ReloadModule("");
-
                 LOGGER.Warn("enter game loop...");
                 Console.WriteLine("enter game loop...");
 

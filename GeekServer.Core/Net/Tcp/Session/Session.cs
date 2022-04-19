@@ -12,6 +12,21 @@ namespace Geek.Server
         public long Id { set; get; }
 
         /// <summary>
+        /// 角色ID
+        /// </summary>
+        public long RoleId { get; set; }
+
+        /// <summary>
+        /// 用户名ID
+        /// </summary>
+        public string UserName { get; set; }
+
+        /// <summary>
+        /// 游戏服id
+        /// </summary>
+        public int GameServerId { get; set; }
+
+        /// <summary>
         /// 连接时间
         /// </summary>
         public DateTime Time { set; get; }

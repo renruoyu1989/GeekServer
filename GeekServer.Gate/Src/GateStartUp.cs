@@ -1,4 +1,5 @@
 ﻿using Nacos.V2;
+using Nacos.V2.Naming.Dtos;
 using Nacos.V2.Naming.Event;
 using Nacos.V2.Utils;
 using Newtonsoft.Json;
@@ -75,7 +76,7 @@ namespace Geek.Server
                 }
 
                 //拉取通用配置
-                var nacosConfig = await NacosClient.Singleton.Get(Settings.Ins.NacosDataID, Settings.Ins.NacosGroup);
+                var nacosConfig = await NacosClient.Singleton.Get(Settings.Ins.NacosDataID);
                 if (string.IsNullOrEmpty(nacosConfig))
                 {
                     LOGGER.Error($"无法从Nacos服务器获取配置,DataId:{Settings.Ins.NacosDataID},Group:{Settings.Ins.NacosGroup}");
@@ -84,12 +85,19 @@ namespace Geek.Server
                 Settings.Ins.Nacos = JsonConvert.DeserializeObject<NacosSetting>(nacosConfig);
                 //设置登录消息ID
                 Settings.Ins.LoginMsgId = 111101;
-                //开启TCP服务
-                //await HttpServer.Start(Settings.Ins.HttpPort);
-                await TcpServer.Start(Settings.Ins.TcpPort, Settings.Ins.UseLibuv);
 
                 //上报注册中心
-                await NacosClient.Singleton.RegisterInstance(ServiceManager.Gate_Service, Settings.Ins.LocalIp, Settings.Ins.HttpPort);
+                var config = await NacosClient.Singleton.GetMutableConfig();
+                Instance ins = new Instance
+                {
+                    Ip = Settings.Ins.LocalIp,
+                    Port = config.GrpcPort,
+                    InstanceId = config.ServerId.ToString()
+                };
+                //开启TCP服务
+                await TcpServer.Start(Settings.Ins.TcpPort, Settings.Ins.UseLibuv);
+                await NacosClient.Singleton.RegisterInstance(ServiceManager.Gate_Service, ins);
+
                 //监听配置变化
                 await NacosClient.Singleton.Subscribe(Settings.Ins.NacosDataID, Settings.Ins.NacosGroup);
                 //监听各种服务(Login,Game,Chart.....)

@@ -10,28 +10,66 @@ namespace Geek.Server
 {
     public abstract class QueryComponentAgent<TComp> : IComponentAgent where TComp : QueryComponent
     {
+
+        static readonly NLog.Logger LOGGER = NLog.LogManager.GetCurrentClassLogger();
+
         public BaseComponent Owner { get; set; }
         internal WorkerActor Actor => Owner.Actor;
         protected TComp Comp => (TComp)Owner;
         public long EntityId => Owner.EntityId;
 
-
+        #region rpc
         public bool IsRemoting { get; set; } = false;
-        private static object rpcAgent;
-        private static object lockObj = new object();
-        public T GetRpcAgent<T>()
+
+        public Task CallRemote(string methodName, params object[] args)
         {
-            lock (lockObj)
+            _ = Actor.SendAsync(async () =>
             {
-                if (rpcAgent == null)
-                {
-                    var temp = RpcClient.Create<T>();
-                    rpcAgent = temp;
-                    return temp;
-                }
-                return (T)rpcAgent;
-            }
+                Type self = this.GetType();
+                var methodInfo = self.GetMethod(methodName);
+                var packet = GetRpcPacket(methodName, args);
+
+                //通过entityid 获取 serverInfo
+                var serverInfo = EntityMgr.GetServerInfo(EntityId);
+                var res = await GrpcClient.Invoke(serverInfo, EntityId, packet);
+                if (res < 0)
+                    LOGGER.Error($"RPC调用失败:{res}");
+            });
+            return Task.CompletedTask;
         }
+
+        public async Task<T> CallRemote<T>(string methodName, params object[] args)
+        {
+            return await Actor.SendAsync(async () =>
+            {
+                Type self = this.GetType();
+                var methodInfo = self.GetMethod(methodName);
+                var packet = GetRpcPacket(methodName, args);
+
+                //通过entityid 获取 serverInfo
+                var serverInfo = EntityMgr.GetServerInfo(EntityId);
+                var res = await GrpcClient.Invoke<T>(serverInfo, EntityId, packet);
+                if (res.Code < 0)
+                    LOGGER.Error($"RPC调用失败:{res.Code}");
+                return res.Result;
+            });
+        }
+
+        private RPCPacket GetRpcPacket(string methodName, object[] args)
+        {
+            Type self = this.GetType();
+            var methodInfo = self.GetMethod(methodName);
+            RPCPacket packet = new RPCPacket
+            {
+                CompAgent = self,
+                MethodName = methodName,
+                Args = args,
+                GenericArgs = methodInfo.GetGenericArguments()
+            };
+            return packet;
+        }
+        #endregion
+
 
         public async Task Foreach<T>(IEnumerable<T> itor, Func<T, Task> dealFunc)
         {

@@ -51,19 +51,19 @@ namespace Geek.Server
 
         #region 配置中心
 
-        public async Task<bool> Publish(string configId, string group, string content)
+        public async Task<bool> Publish(string configId, string content)
         {
-            return await configSvc.PublishConfig(configId, group, content);
+            return await configSvc.PublishConfig(configId, Settings.Ins.NacosGroup, content);
         }
 
-        public async Task<string> Get(string configId, string group)
+        public async Task<string> Get(string configId)
         {
-            return await configSvc.GetConfig(configId, group, 10000L);
+            return await configSvc.GetConfig(configId, Settings.Ins.NacosGroup, 10000L);
         }
 
-        public async Task<bool> Remove(string configId, string group)
+        public async Task<bool> Remove(string configId)
         {
-            return await configSvc.RemoveConfig(configId, group);
+            return await configSvc.RemoveConfig(configId, Settings.Ins.NacosGroup);
         }
 
 
@@ -98,6 +98,12 @@ namespace Geek.Server
 
 
         #region 注册发现
+
+        public async Task RegisterInstance(string serviceName, Instance ins)
+        {
+            await namingSvc.RegisterInstance(serviceName, Settings.Ins.NacosGroup, ins);
+        }
+
         public async Task RegisterInstance(string serviceName, string ip, int port)
         {
             await namingSvc.RegisterInstance(serviceName, Settings.Ins.NacosGroup, ip, port);
@@ -117,7 +123,56 @@ namespace Geek.Server
         {
             return await namingSvc.GetAllInstances(serviceName, Settings.Ins.NacosGroup, subscribe);
         }
+
+        public async Task<Instance> SelectOneHealthyInstance(string serviceName, bool subscribe = true)
+        {
+            return await namingSvc.SelectOneHealthyInstance(serviceName, Settings.Ins.NacosGroup, subscribe);
+        }
+
         #endregion
+
+
+        /// <summary>
+        /// 可变配置，用于测试环境启动多台实例，导致配置冲突
+        /// </summary>
+        public class MutableConfig
+        {
+            public int GrpcPort { get; set; }
+            public int TcpPort { get; set; }
+            public int ServerId { get; set; }
+
+            public void Increment()
+            {
+                GrpcPort++;
+                TcpPort++;
+                ServerId++;
+            }
+        }
+
+        public async Task<MutableConfig> GetMutableConfig()
+        {
+            if (Settings.Ins.IsDebug)
+            {
+                var json = await Singleton.Get("MutableConfig");
+                var res = JsonConvert.DeserializeObject<MutableConfig>(json);
+                Settings.Ins.GrpcPort = res.GrpcPort;
+                Settings.Ins.TcpPort = res.TcpPort;
+                Settings.Ins.ServerId = res.ServerId;
+                var copy = JsonConvert.DeserializeObject<MutableConfig>(json);
+                copy.Increment();
+                await Singleton.Publish("MutableConfig", JsonConvert.SerializeObject(copy));
+                return res;
+            }
+            else
+            {
+                MutableConfig config = new MutableConfig();
+                config.GrpcPort = Settings.Ins.GrpcPort;
+                config.TcpPort = Settings.Ins.TcpPort;
+                config.ServerId = Settings.Ins.ServerId;
+                return config;
+            }
+        }
+
 
     }
 }

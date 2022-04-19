@@ -19,36 +19,49 @@ namespace Geek.Server
         public const string Chart_Service = "Chart_Service";
         public const string Gate_Service = "Gate_Service";
 
-        /// <summary>
-        /// instanceId - RpcClient
-        /// </summary>
-        private Dictionary<string, RpcClient> services = new Dictionary<string, RpcClient>();
+        private Dictionary<string, Dictionary<int, ServerInfo>> services = new Dictionary<string, Dictionary<int, ServerInfo>>();
 
         /// <summary>
-        /// 根据条件和负载均衡选择一个服务器
+        /// 选择一个负载最低且健康的服务器
         /// </summary>
         /// <param name="stype"></param>
         /// <returns></returns>
-        public Instance Select(string serviceName)
+        public async Task<ServerInfo> Select(string serviceName)
         {
-            //从redis，根据用户id，获取当前处于哪个游戏服务器
-            return default;
+            var ins = await NacosClient.Singleton.SelectOneHealthyInstance(serviceName);
+            if (ins != null)
+            {
+                ServerInfo info = new ServerInfo();
+                info.Ip = ins.Ip;
+                info.Port = ins.Port;
+                info.ServerId = int.Parse(ins.InstanceId);
+                return info;
+            }
+            LOGGER.Error($"SelectOneHealthyInstance失败:{serviceName}");
+            return null;
         }
 
-        /// <summary>
-        /// GameServer是有状态的，不能随意分配
-        /// </summary>
-        /// <param name="serviceName"></param>
-        /// <param name="servers"></param>
         public void UpdateInstances(string serviceName, List<Instance> instances)
         {
-            foreach (var ins in instances)
+            lock (services)
             {
-                var instanceId = ins.Metadata["instanceId"];
-                if (!services.ContainsKey(instanceId))
+                services.TryGetValue(serviceName, out var srvDic);
+                if (srvDic == null)
                 {
-                    //var client = RpcClient.Create(ins.Ip, ins.Port);
-                    //services.Add(instanceId, client);
+                    srvDic = new Dictionary<int, ServerInfo>();
+                    services.Add(serviceName, srvDic);
+                }
+                else
+                {
+                    srvDic.Clear();
+                }
+                foreach (var ins in instances)
+                {
+                    ServerInfo info = new ServerInfo();
+                    info.Ip = ins.Ip;
+                    info.Port = ins.Port;
+                    info.ServerId = int.Parse(ins.InstanceId);
+                    srvDic[info.ServerId] = info;
                 }
             }
         }
@@ -59,10 +72,16 @@ namespace Geek.Server
             UpdateInstances(serviceName, instances);
         }
 
-        public RpcClient GetClient(string instanceId)
+
+        public ServerInfo GetSeverInfo(string serviceName, int serverId)
         {
-            services.TryGetValue(instanceId, out var res);
-            return res;
+            lock (services)
+            {
+                if (services.ContainsKey(serviceName) && services[serviceName].ContainsKey(serverId))
+                    return services[serviceName][serverId];
+                LOGGER.Error($"GetSeverInfo失败:{serviceName}:{serverId}");
+                return null;
+            }
         }
 
         public async Task Subscribe(string serviceName)

@@ -13,11 +13,11 @@ namespace Geek.Server
         private readonly WorkerActor workerActor;
         private readonly ConcurrentDictionary<Type, BaseComponent> activeCompMap = new ConcurrentDictionary<Type, BaseComponent>();
 
-        internal RemoteEntity(int entityType, long entityId)
+        internal RemoteEntity(int entityType, long entityId, int parallelism=1)
         {
             this.entityId = entityId;
             this.entityType = entityType;
-            workerActor = new WorkerActor() { entityType = entityType };
+            workerActor = new WorkerActor(parallelism) { entityType = entityType };
         }
 
         public async Task<T> GetCompAgent<T>() where T : BaseComponent

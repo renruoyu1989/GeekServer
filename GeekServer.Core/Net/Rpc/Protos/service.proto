@@ -1,0 +1,24 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Geek.Server";
+
+package service;
+
+service Inner 
+{
+	rpc Invoke (RpcMessage) returns (RpcReply);
+}
+
+message RpcMessage 
+{
+	int32 serverId = 1;
+	int64 entityId = 3;
+	bytes data = 2;
+	
+}
+
+message RpcReply 
+{
+	int32 code = 1;
+	bytes data = 2;
+}

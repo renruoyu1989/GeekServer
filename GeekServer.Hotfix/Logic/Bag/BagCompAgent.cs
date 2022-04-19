@@ -8,7 +8,6 @@ namespace Geek.Server.Logic.Bag
 {
 
     [Service(typeof(ISerializable), Name = "fff", SingleInstance = true)]
-    [Obsolete("this is a test")]
     public class BagCompAgent : StateComponentAgent<BagComp, BagState>
     {
         public Task Init()
@@ -96,6 +95,59 @@ namespace Geek.Server.Logic.Bag
             return Task.CompletedTask;
         }
 
+        [MethodOption.NotAwait]
+        public virtual Task Test6(int a, List<int> list)
+        {
+            if (IsRemoting)
+            {
+                Type[] argsType = new Type[2];
+                argsType[0] = typeof(int);
+                argsType[2] = typeof(List<int>);
+                return CallRemote("Test6", 3, argsType, a, list);
+            }
+            return Task.CompletedTask;
+        }
+
+
+        //public virtual async Task<T> Test7<T>(int b, T a, List<int> list)
+        //{
+        //    await Task.Delay(1);
+        //    return default;
+        //}
+
+
+        [MethodOption.NotAwait]
+        public virtual Task Test8()
+        {
+            return Task.CompletedTask;
+        }
+
+        [MethodOption.ThreadSafe]
+        [MethodOption.NotAwait]
+        public virtual Task Test9(int a, List<int> list)
+        {
+            if (IsRemoting)
+            {
+                Type[] argsType = new Type[2];
+                argsType[0] = typeof(int);
+                argsType[2] = typeof(List<int>);
+                return CallRemote("Test6", 3, argsType, a, list);
+            }
+            return Task.CompletedTask;
+        }
+
+
+        public virtual Task<int> Test10(int a, List<int> list)
+        {
+            if (IsRemoting)
+            {
+                Type[] argsType = new Type[2];
+                argsType[0] = typeof(int);
+                argsType[2] = typeof(List<int>);
+                return CallRemote<int>("Test6", 3, argsType, a, list);
+            }
+            return Task.FromResult(10);
+        }
 
     }
 }

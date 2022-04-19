@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Geek.Server
@@ -15,23 +17,65 @@ namespace Geek.Server
         public long EntityId => Owner.EntityId;
         internal WorkerActor Actor => Owner.Actor;
 
-
+        #region rpc
         public bool IsRemoting { get; set; } = false;
-        private static object rpcAgent;
-        private static object lockObj = new object();
-        public T GetRpcAgent<T>()
+
+        /// <summary>
+        /// TODO:处理notawait
+        /// </summary>
+        /// <param name="methodName"></param>
+        /// <param name="genericParamCount"></param>
+        /// <param name="argsType"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public Task CallRemote(string methodName, int genericParamCount, Type[] argsType, params object[] args)
         {
-            lock (lockObj)
+            _ = Actor.SendAsync(async () =>
             {
-                if (rpcAgent == null)
-                {
-                    var temp = RpcClient.Create<T>();
-                    rpcAgent = temp;
-                    return temp;
-                }
-                return (T)rpcAgent;
-            }
+                Type self = this.GetType();
+                var methodInfo = self.GetMethod(methodName, genericParamCount, argsType);
+                var packet = GetRpcPacket(methodInfo.Name, args);
+
+                //通过entityid 获取 serverInfo
+                var serverInfo = EntityMgr.GetServerInfo(EntityId);
+                var res = await GrpcClient.Invoke(serverInfo, EntityId, packet);
+                if (res < 0)
+                    LOGGER.Error($"RPC调用失败:{res}");
+            });
+            return Task.CompletedTask;
         }
+
+        public async Task<T> CallRemote<T>(string methodName, int genericParamCount, Type[] argsType, params object[] args)
+        {
+            return await Actor.SendAsync(async () =>
+            {
+                Type self = this.GetType();
+                var methodInfo = self.GetMethod(methodName, genericParamCount, argsType);
+                var packet = GetRpcPacket(methodInfo.Name, args);
+
+                //通过entityid 获取 serverInfo
+                var serverInfo = EntityMgr.GetServerInfo(EntityId);
+                var res =  await GrpcClient.Invoke<T>(serverInfo, EntityId, packet);
+                if (res.Code < 0)
+                    LOGGER.Error($"RPC调用失败:{res.Code}");
+                return res.Result;
+            });
+        }
+
+        private RPCPacket GetRpcPacket(string methodName, object[] args)
+        {
+            Type self = this.GetType();
+            var methodInfo = self.GetMethod(methodName);
+            RPCPacket packet = new RPCPacket
+            {
+                CompAgent = self,
+                MethodName = methodName,
+                Args = args,
+                GenericArgs = methodInfo.GetGenericArguments()
+            };
+            return packet;
+        }
+        #endregion
 
         /// <summary>
         /// 等待waitComp的之前的逻辑先执行完再回到当前actor执行callback

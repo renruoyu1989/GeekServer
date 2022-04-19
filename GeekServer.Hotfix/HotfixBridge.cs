@@ -3,6 +3,7 @@ using Geek.Server.Logic.Role;
 using Geek.Server.Logic.Server;
 using Geek.Server.Logic.Test;
 using Geek.Server.Proto;
+using Nacos.V2.Naming.Dtos;
 using Newtonsoft.Json;
 using System;
 using System.Threading.Tasks;
@@ -23,31 +24,35 @@ namespace Geek.Server
             TcpHandlerFactory.SetHandlerGetter(MsgFactory.GetMsg, msgId => HotfixMgr.GetHandler<BaseTcpHandler>(msgId));
 
 
+
             //拉取通用配置
-            var nacosConfig = await NacosClient.Singleton.Get(Settings.Ins.NacosDataID, Settings.Ins.NacosGroup);
+            var nacosConfig = await NacosClient.Singleton.Get(Settings.Ins.NacosDataID);
             if (string.IsNullOrEmpty(nacosConfig))
             {
                 LOGGER.Error($"无法从Nacos服务器获取配置,DataId:{Settings.Ins.NacosDataID},Group:{Settings.Ins.NacosGroup}");
+                throw new Exception($"无法从Nacos服务器获取配置,DataId:{Settings.Ins.NacosDataID},Group:{Settings.Ins.NacosGroup}");
             }
             Settings.Ins.Nacos = JsonConvert.DeserializeObject<NacosSetting>(nacosConfig);
 
+            var config = await NacosClient.Singleton.GetMutableConfig();
+            //上报注册中心
+            Instance ins = new Instance
+            {
+                Ip = Settings.Ins.LocalIp,
+                Port = config.GrpcPort,
+                InstanceId = config.ServerId.ToString()
+            };
 
-            await TcpServer.Start(Settings.Ins.TcpPort, Settings.Ins.UseLibuv);
-            await HttpServer.Start(Settings.Ins.HttpPort);
+            //启动GRPC服务器
+            GrpcServer.Start(config.GrpcPort);
+            await NacosClient.Singleton.RegisterInstance(ServiceManager.Game_Service, ins);
 
-            //启动RPC
-            RpcServer.Start(9090, typeof(HotfixBridge).Assembly);
-            await Task.Delay(1000);
-            RpcClient.Connect("localhost", 9090);
+            //监听配置变化
+            await NacosClient.Singleton.Subscribe(Settings.Ins.NacosDataID, Settings.Ins.NacosGroup);
 
-            //RedisMgr.Init();
-            //ServerInfoUtils.Init();
-            //GrpcServer.Init(Settings.Ins.GrpcPort);
-            //ConsulUtils.Init(Settings.Ins.configCenterUrl);
 
             LOGGER.Info($"connect mongo {Settings.Ins.MongoDB} {Settings.Ins.MongoUrl}...");
             MongoDBConnection.Singleton.Connect(Settings.Ins.MongoDB, Settings.Ins.MongoUrl);
-
 
             GlobalDBTimer.Singleton.Start();
 
@@ -64,6 +69,10 @@ namespace Geek.Server
 
             EntityMgr.Type2ID = EntityID.GetEntityIdFromType;
             EntityMgr.ID2Type = EntityID.GetEntityTypeFromID;
+            EntityMgr.GetServerInfo = EntityID.GetServerInfo;
+
+            //激活实列Entity
+            await EntityMgr.GetCompAgent<GameInsCompAgent>(EntityType.Game);
         }
 
         public async Task<bool> OnLoadSucceed(bool isReload)

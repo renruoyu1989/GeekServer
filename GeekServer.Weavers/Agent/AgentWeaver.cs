@@ -43,13 +43,13 @@ namespace Weavers
                 return;
             }
 
-            var rpcServiceDef = FindTypeDefinition("EventNext.ServiceAttribute");
-            if (rpcServiceDef == null)
-            {
-                WriteError("获取EventNext.ServiceAttribute类型失败");
-                return;
-            }
-            var rpcServiceRef = ModuleDefinition.ImportReference(rpcServiceDef);
+            //var rpcServiceDef = FindTypeDefinition("EventNext.ServiceAttribute");
+            //if (rpcServiceDef == null)
+            //{
+            //    WriteError("获取EventNext.ServiceAttribute类型失败");
+            //    return;
+            //}
+            //var rpcServiceRef = ModuleDefinition.ImportReference(rpcServiceDef);
 
             var taskDef = FindTypeDefinition("System.Threading.Tasks.Task");
             var completeTaskDef = taskDef.Methods.FirstOrDefault(md => md.Name == "get_CompletedTask");
@@ -176,8 +176,13 @@ namespace Weavers
                     bool isNotAwait = mthDef.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == "NotAwait") != null;
                     bool isLongTime = mthDef.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == "LongTimeTask") != null;
                     bool isThreadSafe = mthDef.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == "ThreadSafe") != null;
+                    bool isWrapIgnore = mthDef.CustomAttributes.FirstOrDefault(a => a.AttributeType.Name == "WrapIgnore") != null;
                     //线程安全则直接执行，且没有标记notawait直接跳过不用处理
                     if (isThreadSafe && !isNotAwait)
+                        continue;
+
+                    //忽略处理
+                    if (isWrapIgnore)
                         continue;
 
                     //构造函数

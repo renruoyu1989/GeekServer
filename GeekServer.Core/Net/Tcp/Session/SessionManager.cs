@@ -1,6 +1,7 @@
 ﻿
 
 using DotNetty.Common.Utilities;
+using DotNetty.Transport.Channels;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -41,6 +42,7 @@ namespace Geek.Server
             return old;
         }
 
+
         public static Task Remove(long channelId)
         {
             sessionMap.TryRemove(channelId, out var channel);
@@ -65,6 +67,13 @@ namespace Geek.Server
         {
             sessionMap.TryGetValue(sessionId, out var session);
             return session;
+        }
+
+        public static Session Get(IChannel channel)
+        {
+            if (channel != null)
+                return channel.GetAttribute(SESSION).Get();
+            return null;
         }
 
         public static async Task RemoveAll()

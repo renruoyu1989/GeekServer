@@ -15,12 +15,9 @@ namespace Geek.Server
         /// <returns></returns>
         //Task Deactive();
 
-
         /// <summary>
         /// 是否为远程组件
         /// </summary>
         bool IsRemoting { get; set; }
-        T GetRpcAgent<T>();
-
     }
 }

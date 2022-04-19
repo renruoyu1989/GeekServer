@@ -11,8 +11,17 @@ namespace Geek.Server
         static readonly ConcurrentDictionary<int, RemoteEntity> remoteEntityMap = new ConcurrentDictionary<int, RemoteEntity>();
         static readonly ConcurrentDictionary<long, Entity> entityMap = new ConcurrentDictionary<long, Entity>();
         static readonly ConcurrentDictionary<long, DateTime> activeTimeMap = new ConcurrentDictionary<long, DateTime>();
+
+        /// <summary>
+        /// 本地实体
+        /// </summary>
+        public static ConcurrentDictionary<long, long> LocalEntities = new ConcurrentDictionary<long, long>();
+
         public static Func<long, int> ID2Type { get; set; }
         public static Func<int, long> Type2ID { get; set; }
+
+        public static Func<long, ServerInfo> GetServerInfo { get; set; }
+
 
         readonly static ConcurrentDictionary<long, WorkerActor> lifeActorDic = new ConcurrentDictionary<long, WorkerActor>();
         private static WorkerActor GetLifeActor(long entityId)
@@ -29,7 +38,7 @@ namespace Geek.Server
             }
             return actor;
         }
-
+        
         public static async Task<T> GetCompAgent<T>(long entityId) where T : IComponentAgent
         {
             return (T)await GetCompAgent(entityId, typeof(T));
@@ -95,12 +104,8 @@ namespace Geek.Server
         /// <returns></returns>
         public static bool IsRemoteEntity(long entityId)
         {
-            int type = ID2Type(entityId);
-            if(type == 20)
-                return true;
-            return false;
+            return LocalEntities.ContainsKey(entityId);
         }
-
 
         public static Task<bool> IsCompActive(long entityId, Type compType)
         {

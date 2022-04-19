@@ -1,6 +1,4 @@
-﻿using Nacos.V2;
-using Nacos.V2.Naming.Event;
-using Nacos.V2.Utils;
+﻿using Nacos.V2.Naming.Dtos;
 using Newtonsoft.Json;
 using NLog;
 using NLog.Config;
@@ -20,8 +18,14 @@ namespace Geek.Server
             //开服时间设定
             try
             {
-                var flag = await Start();
+                var flag = Start();
                 if (!flag) return; //启动服务器失败
+
+                LOGGER.Info("regist components...");
+                ComponentTools.RegistAll();
+
+                LOGGER.Info("load hotfix module...");
+                await HotfixMgr.ReloadModule("");
 
                 Settings.Ins.StartServerTime = DateTime.Now;
                 Settings.Ins.AppRunning = true;
@@ -56,7 +60,7 @@ namespace Geek.Server
         }
 
 
-        private static async Task<bool> Start()
+        private static bool Start()
         {
             try
             {
@@ -73,25 +77,6 @@ namespace Geek.Server
                     ExceptionMonitor.Report(ExceptionType.StartFailed, "check restore from file失败").Wait(TimeSpan.FromSeconds(10));
                     return false;
                 }
-
-                //拉取通用配置
-                var nacosConfig = await NacosClient.Singleton.Get(Settings.Ins.NacosDataID, Settings.Ins.NacosGroup);
-                if (string.IsNullOrEmpty(nacosConfig))
-                {
-                    LOGGER.Error($"无法从Nacos服务器获取配置,DataId:{Settings.Ins.NacosDataID},Group:{Settings.Ins.NacosGroup}");
-                    return false;
-                }
-                Settings.Ins.Nacos = JsonConvert.DeserializeObject<NacosSetting>(nacosConfig);
-
-                //登录服务器使用Http
-                //await HttpServer.Start(Settings.Ins.HttpPort);
-
-                //上报注册中心
-                Random rand = new Random();
-                await NacosClient.Singleton.RegisterInstance(Settings.Ins.ServerType.ToString() + "_Service", Settings.Ins.LocalIp, rand.Next(1000, 2000));
-
-                //监听配置变化
-                await NacosClient.Singleton.Subscribe(Settings.Ins.NacosDataID, Settings.Ins.NacosGroup, new ConfigListener());
                 return true;
             }
             catch (Exception e)
@@ -99,26 +84,6 @@ namespace Geek.Server
                 LOGGER.Error($"启动服务器失败,异常:{e}");
                 return false;
             }
-        }
-
-        class ConfigListener : Nacos.V2.IListener
-        {
-            public void ReceiveConfigInfo(string configInfo)
-            {
-                LOGGER.Error("ConfigChanged:" + configInfo);
-                Settings.Ins.Nacos = JsonConvert.DeserializeObject<NacosSetting>(configInfo);
-            }
-        }
-
-        /// <summary>
-        /// 消息ID规则
-        /// 判断消息类型：登录，游戏，聊天。。？？
-        /// </summary>
-        /// <param name="msgId"></param>
-        /// <returns></returns>
-        private static MsgType IDRule(int msgId)
-        {
-            return MsgType.Login;
         }
 
     }

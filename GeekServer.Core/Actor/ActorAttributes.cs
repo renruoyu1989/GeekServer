@@ -21,6 +21,9 @@ namespace Geek.Server
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
         public class ThreadSafe : Attribute { };
 
+        ///<summary>标识不对此函数进行处理(结果和ThreadSage相同，仅语义不同)</summary>
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+        public class WrapIgnore : Attribute { };
 
         ///<summary>此方法执行时间较长(增加超时时间(默认10秒，增加到20秒))</summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
