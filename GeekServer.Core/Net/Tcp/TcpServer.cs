@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using DotNetty.Buffers;
 using DotNetty.Handlers.Timeout;
@@ -20,7 +21,7 @@ namespace Geek.Server
         static IEventLoopGroup workerGroup;
         static DotNetty.Transport.Channels.IChannel bootstrapChannel;
         private TcpServer() { }
-        static async Task RunServerAsync(int port, bool useLibuv)
+        static async Task RunServerAsync(int port, bool useLibuv, List<Type> handlerList)
         {
             if (useLibuv)
             {
@@ -55,7 +56,12 @@ namespace Geek.Server
                     pipeline.AddLast("IdleChecker", new IdleStateHandler(50, 50, 0));
                     // 消息编码解码器 分发handler
                     //每个channel channelpipeline 都会new一次，即每个客户端
-                    pipeline.AddLast(new TcpServerEncoder(), new TcpServerDecoder(), new TcpServerHandler());
+                    //pipeline.AddLast(new TcpServerEncoder(), new TcpServerDecoder(), new TcpServerHandler());
+                    if (handlerList != null && handlerList.Count > 0)
+                    {
+                        for (int i = 0; i < handlerList.Count; i++)
+                            pipeline.AddLast(Activator.CreateInstance(handlerList[i]) as IChannelHandler);
+                    }
                 }));
 
                 bootstrapChannel = await bootstrap.BindAsync(port); 
@@ -72,9 +78,9 @@ namespace Geek.Server
         /// 启动
         /// </summary>
         /// <param name="port"></param>
-        public static Task Start(int port, bool useLibuv)
+        public static Task Start(int port, bool useLibuv, List<Type> handlerList)
         {
-            return RunServerAsync(port, useLibuv);
+            return RunServerAsync(port, useLibuv, handlerList);
         }
 
         /// <summary>

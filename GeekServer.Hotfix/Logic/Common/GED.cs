@@ -10,7 +10,8 @@ namespace Geek.Server
         public static void AddListener<T>(Enum entityType, EventID evtId) where T : IEventListener
         {
             int intType = (int)(object)entityType;
-            var entityId = EntityMgr.Type2ID(intType);
+            //var entityId = EntityMgr.Type2ID(intType);
+            var entityId = EntityID.GetEntityIdFromType(intType);
             AddListener<T>(entityId, evtId);
         }
 

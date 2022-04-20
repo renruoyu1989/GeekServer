@@ -27,7 +27,15 @@ namespace Geek.Server
         Game,
         Login,
         Chart,
-        Test
+        Test,
+
+        ServerInstance = 900, /*服务器实例类型-分割线(勿调整,勿用于业务逻辑)*/
+        GateInstance,
+        LoginInstance,  
+        GameInstnace,
+        ChartInstance,
+
+        Max=1000
     }
 
     /// <summary>
@@ -76,18 +84,15 @@ namespace Geek.Server
         public static ServerInfo GetServerInfo(long entityId)
         {
             EntityType type = (EntityType)GetEntityTypeFromID(entityId);
-            switch (type)
+            if (type > EntityType.ServerInstance)
             {
-                case EntityType.Game:
-                    return ServiceManager.Singleton.GetSeverInfo(ServiceManager.Game_Service, (int)GetID(type));
-                case EntityType.Login:
-                    return ServiceManager.Singleton.GetSeverInfo(ServiceManager.Login_Service, (int)GetID(type));
-                case EntityType.Chart:
-                    return ServiceManager.Singleton.GetSeverInfo(ServiceManager.Chart_Service, (int)GetID(type));
-                default:
-                    break;
+                return ServiceManager.Singleton.GetSeverInfo(type.ToString(), GetServerId(entityId));
             }
             //其他类型需要根据entityId从Redis上获取
+            else
+            {
+                                
+            }
             return null;
         }
 
@@ -96,6 +101,8 @@ namespace Geek.Server
         /// </summary>
         public static int GetServerId(long id)
         {
+            if (id < 10000_0000)
+                return (int)(id / 1000);
             id &= 0x07FFFFFFFFFFFFFF; //高符号位+actorType
             id >>= 42; //时间30+自增12位
             return (int) id;

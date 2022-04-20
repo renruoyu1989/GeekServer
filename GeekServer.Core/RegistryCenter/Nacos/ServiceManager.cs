@@ -14,11 +14,6 @@ namespace Geek.Server
         public static ServiceManager Singleton = new ServiceManager();
         private ServiceManager() { }
 
-        public const string Login_Service = "Login_Service";
-        public const string Game_Service = "Game_Service";
-        public const string Chart_Service = "Chart_Service";
-        public const string Gate_Service = "Gate_Service";
-
         private Dictionary<string, Dictionary<int, ServerInfo>> services = new Dictionary<string, Dictionary<int, ServerInfo>>();
 
         /// <summary>

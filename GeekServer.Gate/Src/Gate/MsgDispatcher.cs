@@ -47,8 +47,9 @@ namespace Geek.Server
         /// <returns></returns>
         public static async Task HandleLoginMsg(GateMsg msg)
         {
-            var serverInfo = await ServiceManager.Singleton.Select(ServiceManager.Login_Service);
-            var loginComp = await EntityMgr.GetCompAgent<LoginInsCompAgent>(serverInfo.ServerId);
+            var serverInfo = await ServiceManager.Singleton.Select(EntityType.LoginInstance.ToString());
+            long id = EntityID.GetID(EntityType.LoginInstance, serverInfo.ServerId);
+            var loginComp = await EntityMgr.GetCompAgent<LoginInsCompAgent>(id);
             var res = await loginComp.Login(msg.Data);
             //登录成功之后再记录session
             if (res.Success)
@@ -76,13 +77,14 @@ namespace Geek.Server
             {
                 ServerInfo serverInfo;
                 if (session.GameServerId <= 0)
-                    serverInfo = await ServiceManager.Singleton.Select(ServiceManager.Game_Service);
+                    serverInfo = await ServiceManager.Singleton.Select(EntityType.GameInstnace.ToString());
                 else
-                    serverInfo = ServiceManager.Singleton.GetSeverInfo(ServiceManager.Game_Service, session.GameServerId);
+                    serverInfo = ServiceManager.Singleton.GetSeverInfo(EntityType.GameInstnace.ToString(), session.GameServerId);
                 if (serverInfo != null)
                 {
                     session.GameServerId = serverInfo.ServerId;
-                    var comp = await EntityMgr.GetCompAgent<GameInsCompAgent>(serverInfo.ServerId);
+                    long id = EntityID.GetID(EntityType.GameInstnace, serverInfo.ServerId);
+                    var comp = await EntityMgr.GetCompAgent<GameInsCompAgent>(id);
                     _ = comp.OnRecevieMsg(session.RoleId, msg.MsgId, msg.Data);
                 }
                 else

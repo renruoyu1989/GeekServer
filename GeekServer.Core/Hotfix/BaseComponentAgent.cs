@@ -34,10 +34,10 @@ namespace Geek.Server
             {
                 Type self = this.GetType();
                 var methodInfo = self.GetMethod(methodName, genericParamCount, argsType);
-                var packet = GetRpcPacket(methodInfo.Name, args);
+                var packet = GetRpcPacket(methodInfo, args);
 
                 //通过entityid 获取 serverInfo
-                var serverInfo = EntityMgr.GetServerInfo(EntityId);
+                var serverInfo = EntityID.GetServerInfo(EntityId);
                 var res = await GrpcClient.Invoke(serverInfo, EntityId, packet);
                 if (res < 0)
                     LOGGER.Error($"RPC调用失败:{res}");
@@ -51,10 +51,10 @@ namespace Geek.Server
             {
                 Type self = this.GetType();
                 var methodInfo = self.GetMethod(methodName, genericParamCount, argsType);
-                var packet = GetRpcPacket(methodInfo.Name, args);
+                var packet = GetRpcPacket(methodInfo, args);
 
                 //通过entityid 获取 serverInfo
-                var serverInfo = EntityMgr.GetServerInfo(EntityId);
+                var serverInfo = EntityID.GetServerInfo(EntityId);
                 var res =  await GrpcClient.Invoke<T>(serverInfo, EntityId, packet);
                 if (res.Code < 0)
                     LOGGER.Error($"RPC调用失败:{res.Code}");
@@ -62,15 +62,21 @@ namespace Geek.Server
             });
         }
 
-        private RPCPacket GetRpcPacket(string methodName, object[] args)
+        private RPCPacket GetRpcPacket(MethodInfo methodInfo, object[] args)
         {
             Type self = this.GetType();
-            var methodInfo = self.GetMethod(methodName);
+
+            var p = methodInfo.GetParameters();
+            Type[] argTypes = new Type[p.Length];
+            for (int i = 0; i < p.Length; i++)
+                argTypes[i] = p[i].ParameterType;
+
             RPCPacket packet = new RPCPacket
             {
                 CompAgent = self,
-                MethodName = methodName,
+                MethodName = methodInfo.Name,
                 Args = args,
+                ArgTypes = argTypes,
                 GenericArgs = methodInfo.GetGenericArguments()
             };
             return packet;

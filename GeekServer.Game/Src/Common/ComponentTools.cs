@@ -27,7 +27,7 @@ namespace Geek.Server
             RegistServerComp<TestComp>(EntityType.Test);
 
             //game
-            RegistServerComp<GameInsComp>(EntityType.Game);
+            RegistServerComp<GameInsComp>(EntityType.GameInstnace);
 
             //设置实体共享actor (默认为true)
             //CompSetting.Singleton.SetIfEntityCompShareActor((int)EntityType.Role, true);

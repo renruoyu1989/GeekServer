@@ -21,6 +21,7 @@ namespace Geek.Server
 
             //解析参数
             var packet = RpcFormatter.Deserialize<RPCPacket>(request.Data.ToByteArray());
+            packet.DecodeArgs();
             LOGGER.Debug($"收到Grpc请求 目标serverId：{request.ServerId} entityId：{request.EntityId} CompAgent:{packet.CompAgent.Name} MethodName:{packet.MethodName}");
             GrpcRes res;
             try
@@ -41,25 +42,6 @@ namespace Geek.Server
                 reply.Data = ByteString.CopyFrom(RpcFormatter.Serialize(res.Res));
             }
             return reply;
-        }
-
-
-
-        private Task<GrpcRes> CallComp(long entityId, RPCPacket packet)
-        {
-            int reqMsgId = 0;
-            GrpcBaseHandler handler = HotfixMgr.GetHandler<GrpcBaseHandler>(reqMsgId);
-            //if (handler == null)
-            //    return ErrorMsg(GrpcCode.HANDLER_NOT_FOUND);
-            //msg.Deserialize(request.Data.ToByteArray());
-            //handler.Msg = msg;
-            //handler.EntityId = request.ActorId;
-            //handler.ServerId = request.ServerId;
-
-
-
-
-            return default;
         }
 
 

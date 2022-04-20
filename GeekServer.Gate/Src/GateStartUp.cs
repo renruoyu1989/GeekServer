@@ -7,6 +7,7 @@ using NLog;
 using NLog.Config;
 using NLog.LayoutRenderers;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 
@@ -16,13 +17,32 @@ namespace Geek.Server
     {
         static NLog.Logger LOGGER = NLog.LogManager.GetCurrentClassLogger();
 
+
         public static async Task Enter()
         {
+            //object[] objs = new object[2];
+            //objs[0] = 1000;
+            //objs[1] = new byte[] { 1, 2, 3, 4 };
+            //var json = JsonConvert.SerializeObject(new byte[] { 1, 2, 3, 4 });
+
+            //var b = JsonConvert.DeserializeObject<byte[]>(json);
+
+            //var json1 = JsonConvert.SerializeObject(objs);
+            //var objs2 = JsonConvert.DeserializeObject<object[]>(json1);
+
+            ////var b2 = JsonConvert.DeserializeObject<byte[]>("\"" + objs2[1].ToString() + "\"");
+            //var b2 = JsonConvert.DeserializeObject<byte[]>(objs2[1].ToString());
+
+
+            //Console.Read();
+
             //开服时间设定
             try
             {
                 var flag = await Start();
                 if (!flag) return; //启动服务器失败
+
+                RegistComps();
 
                 Settings.Ins.StartServerTime = DateTime.Now;
                 Settings.Ins.AppRunning = true;
@@ -95,14 +115,20 @@ namespace Geek.Server
                     InstanceId = config.ServerId.ToString()
                 };
                 //开启TCP服务
-                await TcpServer.Start(Settings.Ins.TcpPort, Settings.Ins.UseLibuv);
-                await NacosClient.Singleton.RegisterInstance(ServiceManager.Gate_Service, ins);
+                var handlerList = new List<Type>
+                {
+                    typeof(GateServerEncoder),
+                    typeof(GateServerDecoder),
+                    typeof(GateServerHandler)
+                };
+                await TcpServer.Start(Settings.Ins.TcpPort, Settings.Ins.UseLibuv, handlerList);
+                await NacosClient.Singleton.RegisterInstance(EntityType.GateInstance.ToString(), ins);
 
                 //监听配置变化
                 await NacosClient.Singleton.Subscribe(Settings.Ins.NacosDataID, Settings.Ins.NacosGroup);
                 //监听各种服务(Login,Game,Chart.....)
-                await ServiceManager.Singleton.Subscribe(ServiceManager.Login_Service);
-                await ServiceManager.Singleton.Subscribe(ServiceManager.Game_Service);
+                await ServiceManager.Singleton.Subscribe(EntityType.LoginInstance.ToString());
+                await ServiceManager.Singleton.Subscribe(EntityType.GameInstnace.ToString());
                 return true;
             }
             catch (Exception e)
@@ -112,15 +138,11 @@ namespace Geek.Server
             }
         }
 
-        /// <summary>
-        /// 消息ID规则
-        /// 判断消息类型：登录，游戏，聊天。。？？
-        /// </summary>
-        /// <param name="msgId"></param>
-        /// <returns></returns>
-        private static MsgType IDRule(int msgId)
+
+        public static void RegistComps()
         {
-            return MsgType.Login;
+            CompSetting.Singleton.RegistComp<LoginInsComp>((int)EntityType.LoginInstance, true);
+            CompSetting.Singleton.RegistComp<GameInsComp>((int)EntityType.GameInstnace, true);
         }
 
     }

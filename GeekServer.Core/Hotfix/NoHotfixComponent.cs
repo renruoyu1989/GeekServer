@@ -11,7 +11,7 @@ namespace Geek.Server
             if (cacheAgent != null)
                 return cacheAgent;
             var agentName = this.GetType().FullName + "Agent";
-            var agentType = Type.GetType(agentName);
+            var agentType = this.GetType().Assembly.GetType(agentName);
             if (agentType != null)
             {
                 cacheAgent = Activator.CreateInstance(agentType) as IComponentAgent;
@@ -35,7 +35,7 @@ namespace Geek.Server
             if (cacheAgent != null)
                 return cacheAgent;
             var agentName = this.GetType().FullName + "Agent";
-            var agentType = Type.GetType(agentName);
+            var agentType = this.GetType().Assembly.GetType(agentName);
             if (agentType != null)
             {
                 cacheAgent = Activator.CreateInstance(agentType) as IComponentAgent;

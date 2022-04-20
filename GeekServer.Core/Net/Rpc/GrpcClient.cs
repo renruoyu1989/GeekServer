@@ -68,7 +68,7 @@ namespace Geek.Server
             RpcReply reply;
             try
             {
-                reply = await client.InvokeAsync(rpcMsg, deadline: DateTime.UtcNow.AddSeconds(4));
+                reply = await client.InvokeAsync(rpcMsg, deadline: DateTime.UtcNow.AddSeconds(400));
             }
             catch (RpcException e)
             {

@@ -9,6 +9,7 @@ namespace Geek.Server
         public static void RegistAll()
         {
             RegistServerComp<LoginComp>(EntityType.Login);
+            RegistServerComp<LoginInsComp>(EntityType.LoginInstance);
         }
 
         static void RegistServerComp<TComp>(EntityType type) where TComp : BaseComponent, new()

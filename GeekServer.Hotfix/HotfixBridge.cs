@@ -45,7 +45,7 @@ namespace Geek.Server
 
             //启动GRPC服务器
             GrpcServer.Start(config.GrpcPort);
-            await NacosClient.Singleton.RegisterInstance(ServiceManager.Game_Service, ins);
+            await NacosClient.Singleton.RegisterInstance(EntityType.GameInstnace.ToString(), ins);
 
             //监听配置变化
             await NacosClient.Singleton.Subscribe(Settings.Ins.NacosDataID, Settings.Ins.NacosGroup);
@@ -67,12 +67,12 @@ namespace Geek.Server
             LOGGER.Info("index mongodb...");
             await MongoDBConnection.Singleton.IndexCollectoinMore<RoleState>(MongoField.Name);
 
-            EntityMgr.Type2ID = EntityID.GetEntityIdFromType;
-            EntityMgr.ID2Type = EntityID.GetEntityTypeFromID;
-            EntityMgr.GetServerInfo = EntityID.GetServerInfo;
+            //EntityMgr.Type2ID = EntityID.GetEntityIdFromType;
+            //EntityMgr.ID2Type = EntityID.GetEntityTypeFromID;
+            //EntityMgr.GetServerInfo = EntityID.GetServerInfo;
 
             //激活实列Entity
-            await EntityMgr.GetCompAgent<GameInsCompAgent>(EntityType.Game);
+            await EntityMgr.GetCompAgent<GameInsCompAgent>(EntityType.GameInstnace);
         }
 
         public async Task<bool> OnLoadSucceed(bool isReload)

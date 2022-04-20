@@ -29,6 +29,7 @@ namespace Geek.Server
     {
     }
 
+    //"Geek.Server.LoginInsCompAgent"
     public class LoginInsCompAgent : FuncComponentAgent<LoginInsComp>
     {
         static readonly NLog.Logger LOGGER = NLog.LogManager.GetCurrentClassLogger();
@@ -40,24 +41,32 @@ namespace Geek.Server
         /// <returns></returns>
         public async Task<LoginRes> Login(byte[] msg)
         {
-            try
+
+            if (IsRemoting)
             {
-                ReqLogin req = new ReqLogin();
-                req.Read(msg, 0);
-
-                //TODO:可以分配多个登录Actor进行登录
-                var loginComp = await EntityMgr.GetCompAgent<LoginCompAgent>(EntityType.Login);
-                var res = await loginComp.Login(req);
-
-                return res; 
+                return await CallRemote<LoginRes>(nameof(Login), 0, new Type[] { typeof(byte[]) }, msg);
             }
-            catch (Exception e)
+            else
             {
-                LOGGER.Error(e.ToString());
-                LoginRes res = new LoginRes();
-                res.Success = false;
-                res.ErrorMsg = "解析登录协议失败";
-                return res;
+                try
+                {
+                    ReqLogin req = new ReqLogin();
+                    req.Read(msg, 0);
+
+                    //TODO:可以分配多个登录Actor进行登录
+                    var loginComp = await EntityMgr.GetCompAgent<LoginCompAgent>(EntityType.Login);
+                    var res = await loginComp.Login(req);
+
+                    return res;
+                }
+                catch (Exception e)
+                {
+                    LOGGER.Error(e.ToString());
+                    LoginRes res = new LoginRes();
+                    res.Success = false;
+                    res.ErrorMsg = "解析登录协议失败";
+                    return res;
+                }
             }
         }
     }

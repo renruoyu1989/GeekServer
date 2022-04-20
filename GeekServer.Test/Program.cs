@@ -22,8 +22,8 @@ namespace Geek.Server.Test
             Console.WriteLine("初始化消息工厂......");
             TcpHandlerFactory.InitHandler(typeof(RobotManager));
 
-            EntityMgr.Type2ID = EntityID.GetEntityIdFromType;
-            EntityMgr.ID2Type = EntityID.GetEntityTypeFromID;
+            //EntityMgr.Type2ID = EntityID.GetEntityIdFromType;
+            //EntityMgr.ID2Type = EntityID.GetEntityTypeFromID;
 
             RegisterComps();
             RobotManager.Start();

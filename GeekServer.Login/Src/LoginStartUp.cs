@@ -97,7 +97,9 @@ namespace Geek.Server
                     Port = config.GrpcPort,
                     InstanceId = config.ServerId.ToString()
                 };
-                await NacosClient.Singleton.RegisterInstance(ServiceManager.Login_Service, ins);
+                //启动GRPC服务器
+                GrpcServer.Start(config.GrpcPort);
+                await NacosClient.Singleton.RegisterInstance(EntityType.LoginInstance.ToString(), ins);
 
                 //监听配置变化
                 await NacosClient.Singleton.Subscribe(Settings.Ins.NacosDataID, Settings.Ins.NacosGroup, new ConfigListener());
@@ -105,8 +107,16 @@ namespace Geek.Server
                 LOGGER.Info("regist components...");
                 ComponentTools.RegistAll();
 
-                //激活实列Entity
-                await EntityMgr.GetCompAgent<GameInsCompAgent>(EntityType.Login);
+
+
+                LOGGER.Info($"connect mongo {Settings.Ins.MongoDB} {Settings.Ins.MongoUrl}...");
+                MongoDBConnection.Singleton.Connect(Settings.Ins.MongoDB, Settings.Ins.MongoUrl);
+                GlobalDBTimer.Singleton.Start();
+
+                //激活Server实列Entity
+                long loginId = EntityID.GetID(EntityType.Login);
+                EntityMgr.LocalEntities.TryAdd(loginId, loginId);
+                await EntityMgr.GetCompAgent<LoginInsCompAgent>(EntityType.LoginInstance);
 
                 return true;
             }

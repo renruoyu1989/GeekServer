@@ -30,7 +30,7 @@ namespace Geek.Server
                 var packet = GetRpcPacket(methodName, args);
 
                 //通过entityid 获取 serverInfo
-                var serverInfo = EntityMgr.GetServerInfo(EntityId);
+                var serverInfo = EntityID.GetServerInfo(EntityId);
                 var res = await GrpcClient.Invoke(serverInfo, EntityId, packet);
                 if (res < 0)
                     LOGGER.Error($"RPC调用失败:{res}");
@@ -47,7 +47,7 @@ namespace Geek.Server
                 var packet = GetRpcPacket(methodName, args);
 
                 //通过entityid 获取 serverInfo
-                var serverInfo = EntityMgr.GetServerInfo(EntityId);
+                var serverInfo = EntityID.GetServerInfo(EntityId);
                 var res = await GrpcClient.Invoke<T>(serverInfo, EntityId, packet);
                 if (res.Code < 0)
                     LOGGER.Error($"RPC调用失败:{res.Code}");

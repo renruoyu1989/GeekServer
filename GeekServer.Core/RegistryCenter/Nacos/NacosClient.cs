@@ -156,7 +156,7 @@ namespace Geek.Server
                 var json = await Singleton.Get("MutableConfig");
                 var res = JsonConvert.DeserializeObject<MutableConfig>(json);
                 Settings.Ins.GrpcPort = res.GrpcPort;
-                Settings.Ins.TcpPort = res.TcpPort;
+                //Settings.Ins.TcpPort = res.TcpPort;
                 Settings.Ins.ServerId = res.ServerId;
                 var copy = JsonConvert.DeserializeObject<MutableConfig>(json);
                 copy.Increment();
@@ -167,7 +167,7 @@ namespace Geek.Server
             {
                 MutableConfig config = new MutableConfig();
                 config.GrpcPort = Settings.Ins.GrpcPort;
-                config.TcpPort = Settings.Ins.TcpPort;
+                //config.TcpPort = Settings.Ins.TcpPort;
                 config.ServerId = Settings.Ins.ServerId;
                 return config;
             }

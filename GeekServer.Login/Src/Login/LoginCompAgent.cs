@@ -45,7 +45,7 @@ namespace Geek.Server.Src.Login
             }
             res.isNewRole = isNewRole;
             res.RoleId = roleId;
-
+            res.Success = true;
             return res;
         }
 

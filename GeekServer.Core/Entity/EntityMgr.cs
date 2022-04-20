@@ -17,10 +17,9 @@ namespace Geek.Server
         /// </summary>
         public static ConcurrentDictionary<long, long> LocalEntities = new ConcurrentDictionary<long, long>();
 
-        public static Func<long, int> ID2Type { get; set; }
-        public static Func<int, long> Type2ID { get; set; }
-
-        public static Func<long, ServerInfo> GetServerInfo { get; set; }
+        //public static Func<long, int> ID2Type { get; set; }
+        //public static Func<int, long> Type2ID { get; set; }
+        //public static Func<long, ServerInfo> GetServerInfo { get; set; }
 
 
         readonly static ConcurrentDictionary<long, WorkerActor> lifeActorDic = new ConcurrentDictionary<long, WorkerActor>();
@@ -44,18 +43,13 @@ namespace Geek.Server
             return (T)await GetCompAgent(entityId, typeof(T));
         }
 
-        public static Task<T> GetCompAgent<T>(int entityType) where T : IComponentAgent
-        {
-            var id = Type2ID(entityType);
-            return GetCompAgent<T>(id);
-        }
-
         /// <summary>
         /// entityType请传入EntityType枚举类型
         /// </summary>
-        public static Task<T> GetCompAgent<T>(Enum entityType) where T : IComponentAgent
+        public static Task<T> GetCompAgent<T>(EntityType entityType) where T : IComponentAgent
         {
-            return GetCompAgent<T>((int)(object)entityType);
+            var id = EntityID.GetID(entityType);
+            return GetCompAgent<T>(id);
         }
 
         internal static async Task<IComponentAgent> GetCompAgent(long entityId, Type compAgentType)
@@ -73,7 +67,9 @@ namespace Geek.Server
         {
             if (IsRemoteEntity(entityId))
             {
-                var entityType = ID2Type(entityId);
+                //var entityType = ID2Type(entityId);
+                var entityType = EntityID.GetEntityTypeFromID(entityId);
+
                 remoteEntityMap.TryGetValue(entityType, out RemoteEntity entity);
                 if (entity == null)
                 {
@@ -104,7 +100,10 @@ namespace Geek.Server
         /// <returns></returns>
         public static bool IsRemoteEntity(long entityId)
         {
-            return LocalEntities.ContainsKey(entityId);
+            int etype = EntityID.GetEntityTypeFromID(entityId);
+            if ((int)Settings.Ins.ServerType == etype)
+                return false;
+            return !LocalEntities.ContainsKey(entityId);
         }
 
         public static Task<bool> IsCompActive(long entityId, Type compType)
@@ -151,7 +150,8 @@ namespace Geek.Server
             var list = CompSetting.Singleton.AutoActiveEntityList;
             foreach(var type in list)
             {
-                var id = Type2ID(type);
+                //var id = Type2ID(type);
+                var id = EntityID.GetEntityIdFromType(type);
                 var entity = await GetOrNewEntity(id);
                 var task = entity.ActiveAutoActiveComps();
                 taskList.Add(task);
@@ -205,7 +205,8 @@ namespace Geek.Server
                 entityMap.TryGetValue(entityId, out entity);
                 if (entity == null)
                 {
-                    var type = ID2Type(entityId);
+                    //var type = ID2Type(entityId);
+                    var type = EntityID.GetEntityTypeFromID(entityId);
                     entity = new Entity(type, entityId);
                     entityMap.TryAdd(entityId, entity);
                     await entity.InitListener();

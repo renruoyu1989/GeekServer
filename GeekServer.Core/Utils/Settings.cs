@@ -3,17 +3,18 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using Geek.Server;
 using Newtonsoft.Json;
 
 public enum ServerType
 {
     None = 0,
     //网关服
-    Gate,
+    Gate = EntityType.GateInstance,
     //登录服
-    Login,
+    Login = EntityType.LoginInstance,
     //游戏服
-    Game,
+    Game = EntityType.GameInstnace,
     //中心服
     Center,
     //聊天服

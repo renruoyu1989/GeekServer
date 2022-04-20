@@ -10,7 +10,7 @@ namespace Geek.Server
     public abstract class BaseActor
     {
         readonly static NLog.Logger LOGGER = NLog.LogManager.GetCurrentClassLogger();
-        public const int TIME_OUT = 13000;
+        public const int TIME_OUT = 1300000;
 
         /// <summary>
         /// 当前调用链id
