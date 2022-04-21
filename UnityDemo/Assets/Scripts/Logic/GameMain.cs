@@ -11,7 +11,9 @@ namespace Logic
         {
             DemoService.Singleton.RegisterEventListener();
             await ConnectServer();
+            Debug.Log("start login");
             await Login();
+            Debug.Log("start get bag data");
             await ReqBagInfo();
         }
 
