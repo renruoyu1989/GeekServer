@@ -28,7 +28,7 @@ namespace Geek.Server
 
                 //读数据
                 var filter = Builders<TState>.Filter.Eq(MongoField.Id, id);
-                var col = CurDateBase.GetCollection<TState>(typeof(TState).FullName + StateComponent.StateSuffix);
+                var col = CurDateBase.GetCollection<TState>(BaseDBState.WrapperFullName<TState>());
                 var state = await (await col.FindAsync(filter)).FirstOrDefaultAsync();
                 if (state == null && defaultGetter != null)
                     state = defaultGetter();
@@ -56,7 +56,7 @@ namespace Geek.Server
             {
                 //读数据
                 var filter = Builders<TState>.Filter.Eq(MongoField.Id, id);
-                var col = CurDateBase.GetCollection<TState>(typeof(TState).FullName + StateComponent.StateSuffix);
+                var col = CurDateBase.GetCollection<TState>(BaseDBState.WrapperFullName<TState>());
                 var state = await (await col.FindAsync(filter)).FirstOrDefaultAsync();
                 if (state == null && defaultGetter != null)
                     state = defaultGetter();
@@ -80,7 +80,7 @@ namespace Geek.Server
                 state.ReadyToSaveToDB();
                 //保存数据
                 var filter = Builders<TState>.Filter.Eq(MongoField.Id, state.Id);
-                var col = CurDateBase.GetCollection<TState>(typeof(TState).FullName + StateComponent.StateSuffix);
+                var col = CurDateBase.GetCollection<TState>(BaseDBState.WrapperFullName<TState>());
                 var ret = await col.ReplaceOneAsync(filter, state, new ReplaceOptions() { IsUpsert = true });
                 if (ret.IsAcknowledged)
                     state.SavedToDB();
@@ -94,7 +94,7 @@ namespace Geek.Server
                 state.ReadyToSaveToDB();
                 //保存数据
                 var filter = Builders<TState>.Filter.Eq(MongoField.Id, id);
-                var col = CurDateBase.GetCollection<TState>(typeof(TState).FullName + StateComponent.StateSuffix);
+                var col = CurDateBase.GetCollection<TState>(BaseDBState.WrapperFullName<TState>());
                 var ret = await col.ReplaceOneAsync(filter, state, new ReplaceOptions() { IsUpsert = true });
                 if (ret.IsAcknowledged)
                     state.SavedToDB();
@@ -103,7 +103,7 @@ namespace Geek.Server
 
         public Task IndexCollectoinMore<TState>(string indexKey) where TState : DBState
         {
-            var col = CurDateBase.GetCollection<TState>(typeof(TState).FullName + StateComponent.StateSuffix);
+            var col = CurDateBase.GetCollection<TState>(BaseDBState.WrapperFullName<TState>());
             var key1 = Builders<TState>.IndexKeys.Ascending(indexKey);
             var key2 = Builders<TState>.IndexKeys.Ascending(MongoField.Id);
             var model1 = new CreateIndexModel<TState>(key1);

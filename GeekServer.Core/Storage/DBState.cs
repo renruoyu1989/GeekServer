@@ -22,6 +22,8 @@ namespace Geek.Server
     {
         protected HashSet<BaseDBState> stList = new HashSet<BaseDBState>();
         protected bool _stateChanged;
+        public const string StateSuffix = "Wrapper";
+
         public virtual bool IsChanged
         {
             get
@@ -48,11 +50,16 @@ namespace Geek.Server
             }
         }
 
-        public static BaseDBState CreateStateWrapper<T>() where T : BaseDBState, new()
+        public static BaseDBState CreateStateWrapper<T>() where T : BaseDBState
         {
             Type self = typeof(T);
-            var wrapperType = self.Assembly.GetType(self.FullName + StateComponent.StateSuffix);
+            var wrapperType = self.Assembly.GetType(self.FullName + StateSuffix);
             return (BaseDBState)Activator.CreateInstance(wrapperType);
+        }
+
+        public static string WrapperFullName<T>() where T : BaseDBState
+        {
+            return typeof(T).FullName + StateSuffix;
         }
 
 
