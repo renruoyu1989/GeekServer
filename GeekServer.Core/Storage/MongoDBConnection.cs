@@ -35,8 +35,7 @@ namespace Geek.Server
                 if (state == null)
                 {
                     //state = new TState { Id = id };
-                    var stateType = typeof(TState).Assembly.GetType(typeof(TState).FullName + StateComponent.StateSuffix);
-                    state = (TState)Activator.CreateInstance(stateType);
+                    state = (TState)BaseDBState.CreateStateWrapper<TState>();
                     state.Id = id;
                 }
                 state.ClearChanges();

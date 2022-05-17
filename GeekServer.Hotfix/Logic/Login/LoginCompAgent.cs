@@ -71,12 +71,11 @@ namespace Geek.Server.Logic.Login
             }
             state = await Comp.LoadState(playerId, () =>
             {
-                return new PlayerInfoState()
-                {
-                    Id = playerId,
-                    UserName = userName,
-                    SdkType = sdkType
-                };
+                var playerState = (PlayerInfoState)BaseDBState.CreateStateWrapper<PlayerInfoState>();
+                playerState.Id = playerId;
+                playerState.UserName = userName;
+                playerState.SdkType = sdkType;
+                return playerState;
             });
 
             Comp.PlayerMap[playerId] = state;
