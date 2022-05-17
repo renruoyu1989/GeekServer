@@ -47,10 +47,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\GeekServer.Weavers\GeekServer.Weavers.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<WeaverFiles Include="$(OutputPath)/GeekServer.Weavers.dll" WeaverClassNames="CoreWeaver" />
 	</ItemGroup>
 
