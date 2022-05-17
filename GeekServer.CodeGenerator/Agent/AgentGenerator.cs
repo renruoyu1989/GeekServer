@@ -21,6 +21,9 @@ namespace Geek.Server
         {
             if (context.SyntaxReceiver is AgentFilter receiver)
             {
+                //生成模板
+                var str = ResLoader.LoadTemplate("Agent.liquid");
+                Template agentTemplate = Template.Parse(str);
                 foreach (var agent in receiver.AgentList)
                 {
                     string fullName = agent.GetFullName();
@@ -116,9 +119,6 @@ namespace Geek.Server
                             }
                         }
                     }
-                    //生成模板
-                    var str = ResLoader.LoadTemplate("Agent.liquid");
-                    Template agentTemplate = Template.Parse(str);
                     var source = agentTemplate.Render(info);
                     context.AddSource($"{info.Name}.g.cs", source);
                 }

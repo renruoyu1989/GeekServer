@@ -16,9 +16,12 @@
 		<OutputPath>../app</OutputPath>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <None Remove="Template\State.liquid" />
+	</ItemGroup>
+
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Build.Framework" Version="17.2.0" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.3">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -33,6 +36,7 @@
 	<ItemGroup>
 		<EmbeddedResource Include="$(PKGScriban)\lib\netstandard2.0\Scriban.dll" Visible="false" />
 		<EmbeddedResource Include="$(ProjectPath)\..\Template\Agent.liquid" Visible="true" />
+		<EmbeddedResource Include="$(ProjectPath)\..\Template\State.liquid" Visible="true" />
 	</ItemGroup>
 
 </Project>
