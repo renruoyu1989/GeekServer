@@ -1,4 +1,7 @@
-﻿using Geek.Client;
+﻿using Base.Net;
+using ClientProto;
+using Geek.Client;
+using Geek.Client.Config;
 using Geek.Server;
 using Geek.Server.Proto;
 using System.Threading.Tasks;
@@ -13,6 +16,10 @@ namespace Logic
         public static GameMain Singleton = null;
         public Text Txt;
 
+        public string serverIp = "127.0.0.1";
+        public int serverPort = 8899;
+        public string userName = "123456";
+
         private void Awake()
         {
             Singleton = this;
@@ -20,23 +27,27 @@ namespace Logic
 
         async void Start()
         {
-            GameClient.Singleton.Init();
-            DemoService.Singleton.RegisterEventListener();
-            await ConnectServer();
-            await Login();
+            Txt = GameObject.Find("Text").GetComponent<Text>();
 
-            for (int i = 0; i < 1; i++)
+            Application.logMessageReceived += (con, stackTrace, type) =>
             {
-                await ReqBagInfo();
-                await Task.Delay(1000);
+                GameMain.Singleton.AppendLog(con);
+            };
+
+            //GameDataManager.ReloadAll(); 
+            DemoService.Singleton.RegisterEventListener();
+            if (!await ConnectServer())
+            {
+                return;
             }
+            await Login();
+            await ReqBagInfo();
+            await ReqComposePet();
         }
 
-        private async Task ConnectServer()
+        private async Task<bool> ConnectServer()
         {
-            //这里填写你的本机的内网ip地址,不要使用127.0.0.1（有可能由于hosts设置连不上）
-            _ = GameClient.Singleton.Connect("192.168.0.163", 10000);
-            await MsgWaiter.StartWait(GameClient.ConnectEvt);
+            return await GameClient.Singleton.Connect(serverIp, serverPort);
         }
 
         private Task Login()
@@ -45,7 +56,7 @@ namespace Logic
             var req = new ReqLogin();
             req.SdkType = 0;
             req.SdkToken = "";
-            req.UserName = "123456";
+            req.UserName = userName;
             req.Device = SystemInfo.deviceUniqueIdentifier;
             if (Application.platform == RuntimePlatform.Android)
                 req.Platform = "android";
@@ -62,11 +73,19 @@ namespace Logic
             return DemoService.Singleton.SendMsg(req);
         }
 
+        private Task ReqComposePet()
+        {
+            ReqComposePet req = new ReqComposePet();
+            req.FragmentId = 1000;
+            return DemoService.Singleton.SendMsg(req);
+        }
+
 
         private void OnApplicationQuit()
         {
             Debug.Log("OnApplicationQuit");
             GameClient.Singleton.Close();
+            MsgWaiter.DisposeAll();
         }
 
 
@@ -78,6 +97,11 @@ namespace Logic
                 temp += str;
                 Txt.text = temp;
             }
+        }
+
+        void Update()
+        {
+            GameClient.Singleton.Update(GED.NED);
         }
 
     }

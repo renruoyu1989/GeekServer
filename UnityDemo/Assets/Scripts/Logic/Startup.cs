@@ -1,6 +1,7 @@
 ﻿using Geek.Server.Proto;
 using MessagePack;
 using MessagePack.Resolvers;
+
 using UnityEngine;
 
 namespace Logic
@@ -12,15 +13,7 @@ namespace Logic
         static void Initialize()
         {
             PolymorphicRegister.Load();
+            new GameObject("GameMain").AddComponent<GameMain>();
         }
-
-#if UNITY_EDITOR
-        [UnityEditor.InitializeOnLoadMethod]
-        static void EditorInitialize()
-        {
-            Initialize();
-        }
-#endif
-
     }
 }

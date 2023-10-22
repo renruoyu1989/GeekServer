@@ -33,11 +33,20 @@ namespace Geek.Client
         {
             if (waitDic.Count > 0)
             {
-                if(allTcs == null || allTcs.Task.IsCompleted)
+                if (allTcs == null || allTcs.Task.IsCompleted)
                     allTcs = new TaskCompletionSource<bool>();
                 await allTcs.Task;
             }
             return true;
+        }
+
+        public static void DisposeAll()
+        {
+            if (waitDic.Count > 0)
+            {
+                foreach (var item in waitDic)
+                    item.Value.Timer?.Dispose();
+            }
         }
 
         public static async Task<bool> StartWait(int uniId)
@@ -56,9 +65,10 @@ namespace Geek.Client
             return true;
         }
 
-        public static void EndWait(int uniId, bool result=true)
+        public static void EndWait(int uniId, bool result = true)
         {
-            if(!result) UnityEngine.Debug.LogError("await失败：" + uniId);
+            UnityEngine.Debug.Log("结束等待消息:" + uniId);
+            if (!result) UnityEngine.Debug.LogError("await失败：" + uniId);
             if (waitDic.ContainsKey(uniId))
             {
                 var waiter = waitDic[uniId];
@@ -75,29 +85,24 @@ namespace Geek.Client
             }
             else
             {
-                if(uniId > 0)
+                if (uniId > 0)
                     UnityEngine.Debug.LogError("找不到EndWait：" + uniId + ">size：" + waitDic.Count);
             }
         }
 
-        long timerId;
         public TaskCompletionSource<bool> Tcs { private set; get; }
 
-        void Reset()
-        {
-            Tcs = new TaskCompletionSource<bool>();
-        }
 
-        private Timer timer;
+        public Timer Timer { private set; get; }
         void Start()
         {
             Tcs = new TaskCompletionSource<bool>();
-            timer = new Timer(TimeOut, null, 10000, -1);
+            Timer = new Timer(TimeOut, null, 10000, -1);
         }
 
-        void End(bool result)
+        public void End(bool result)
         {
-            timer.Dispose();
+            Timer.Dispose();
             if (Tcs != null)
                 Tcs.TrySetResult(result);
             Tcs = null;
